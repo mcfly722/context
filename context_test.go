@@ -22,7 +22,6 @@ func buildTree(context *Context, currentPath string, width int, depth int) {
 				select {
 				case err := <-ctx.OnCancel():
 					fmt.Println(fmt.Sprintf("canceled %v (%v)", currentPath, err))
-
 					ctx.Disposed()
 					return
 				}
@@ -48,9 +47,7 @@ func Test_TreeOrder(t *testing.T) {
 
 	fmt.Println("\ncanceling main context")
 
-	err := errors.New("test")
-
-	ctx.Cancel(err)
+	ctx.Cancel(ErrCanceled)
 
 	fmt.Println("finished")
 }

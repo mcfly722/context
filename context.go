@@ -1,5 +1,10 @@
 package context
 
+import "errors"
+
+// ErrCanceled ...
+var ErrCanceled = errors.New("context canceled")
+
 // Context ...
 type Context struct {
 	id          int64
