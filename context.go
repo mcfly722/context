@@ -2,21 +2,16 @@ package context
 
 // Context ...
 type Context struct {
-	id     int64
-	parent *Context
-	childs map[int64]*Context
-
-	pathFromRoot []int64
-	nextChildID  int64
-
-	constructor chan *Context // used to attach new Context to Context tree
-	destructor  chan *Context // used to deattach old Context from Context tree
-
-	cancel     chan *cancelOperation // used to deattach Context and all child subcontexts
-	cancelDone chan bool             // send signal when cancel done
-
-	onCancel chan error
-	desposed chan bool
+	id          int64
+	parent      *Context
+	childs      map[int64]*Context
+	nextChildID int64
+	constructor chan *Context         // used to attach new Context to Context tree
+	destructor  chan *Context         // used to deattach old Context from Context tree
+	cancel      chan *cancelOperation // used to deattach Context and all child subcontexts
+	cancelDone  chan bool             // send signal when cancel done
+	onCancel    chan error            // used to send cancel error
+	desposed    chan bool             // used to submit all context tree changes before release runtime
 }
 
 type cancelOperation struct {
@@ -28,9 +23,6 @@ func (context *Context) cancelator(err error) {
 
 	for _, ctx := range context.childs {
 		// send Cancel to all upper levels
-
-		//fmt.Println(fmt.Sprintf("cancelator %v", ctx.description))
-
 		ctx.cancelator(err)
 	}
 
@@ -57,15 +49,11 @@ func Background() *Context {
 				newContext.id = newContext.parent.nextChildID
 				newContext.parent.childs[newContext.id] = newContext
 				newContext.parent.nextChildID++
-				//fmt.Println(fmt.Sprintf("create %v", newContext.description))
 
 			case cancelOperation := <-root.cancel:
-				//fmt.Println(fmt.Sprintf("cancel %v", cancelOperation.context.description))
 				cancelOperation.context.cancelator(cancelOperation.error)
 
-				//fmt.Println(fmt.Sprintf("canceled %v", cancelOperation.context.description))
 				cancelOperation.context.cancelDone <- true
-				//fmt.Println(fmt.Sprintf("notified %v", cancelOperation.context.description))
 			}
 		}
 	}()
