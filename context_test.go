@@ -1,33 +1,30 @@
-package context_test
+package context
 
 import (
 	"errors"
 	"fmt"
 	"testing"
-
-	"github.com/mcfly722/goPackages/context"
 )
 
-func buildTree(context *context.Context, currentPath string, width int, depth int) {
+func buildTree(context *Context, currentPath string, width int, depth int) {
 
 	if depth > 0 {
 
 		ctx := context.NewChildContext()
-		fmt.Println(fmt.Sprintf("creating %v", currentPath))
+		fmt.Println(fmt.Sprintf("created %v", currentPath))
 
-		for i := 1; i <= width; i++ {
+		for i := 0; i < width; i++ {
 			buildTree(ctx, fmt.Sprintf("%v->%v", currentPath, i), width, depth-1)
 		}
 
 		go func() {
 			for {
 				select {
-				case <-ctx.OnCancel():
-					fmt.Println(fmt.Sprintf("canceling %v", currentPath))
+				case err := <-ctx.OnCancel():
+					fmt.Println(fmt.Sprintf("canceled %v (%v)", currentPath, err))
 
 					ctx.Disposed()
 					return
-				default:
 				}
 			}
 
@@ -38,16 +35,22 @@ func buildTree(context *context.Context, currentPath string, width int, depth in
 }
 
 func Test_TreeOrder(t *testing.T) {
+	ctx := Background()
+	buildTree(ctx, "0", 3, 5)
 
-	ctx := (context.Background()).NewChildContext()
+	fmt.Println("\ncanceling hive 0->2->1")
+	ctx1 := ctx.childs[0].childs[2].childs[1]
+	err1 := errors.New("test")
 
-	buildTree(ctx, "0", 3, 4)
+	fmt.Println(fmt.Sprintf("%v", err1))
 
-	fmt.Println("canceling main context")
+	ctx1.Cancel(err1)
+
+	fmt.Println("\ncanceling main context")
 
 	err := errors.New("test")
 
-	ctx.Cancel(&err)
+	ctx.Cancel(err)
 
 	fmt.Println("finished")
 }
