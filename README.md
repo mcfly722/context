@@ -9,7 +9,7 @@ To resolve this issue, this is separate implementation of context package, and i
 
 #### 1. Create root context:
 ```
-rootContext := context.Background()
+rootContext := context.NewRoot()
 ```
 
 #### 2. Create childs and subchilds:
@@ -26,14 +26,21 @@ go func() {
   for {
     select {
     case err := <-rootContext.OnCancel():
+
       fmt.Println(fmt.Sprintf("canceled (%v)", err))
 
-      rootContext.Disposed()
+      rootContext.Disposed()         // <--- !!! Here we tell that context completely finished !!!
+
       return
     }
   }
 
 }()
+```
+
+#### 4. Close context and all it's subchilds
+```
+rootContext.Cancel(context.Canceled)
 ```
 
 ### Limitations and specific

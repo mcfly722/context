@@ -34,7 +34,7 @@ func buildTree(context *Context, currentPath string, width int, depth int) {
 }
 
 func Test_TreeOrder(t *testing.T) {
-	ctx := Background()
+	ctx := NewRoot()
 	buildTree(ctx, "0", 3, 5)
 
 	fmt.Println("\ncanceling hive 0->2->1")

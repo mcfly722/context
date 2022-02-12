@@ -1,6 +1,8 @@
 package context
 
-import "errors"
+import (
+	"errors"
+)
 
 // ErrCanceled ...
 var ErrCanceled = errors.New("context canceled")
@@ -42,8 +44,8 @@ func (context *Context) cancelator(err error) {
 
 }
 
-// Background ...
-func Background() *Context {
+// NewRoot ...
+func NewRoot() *Context {
 	root := newEmptyContext(nil)
 
 	// here we use one goroutine for root for attach/deattach operations on context tree to do not use mutex'es (they are blocks all tree nodes and really slow).
@@ -104,6 +106,7 @@ func (context *Context) Cancel(err error) {
 		context: context,
 		error:   err,
 	}
+
 	context.cancel <- operation
 
 	// waiting till all childs and subchilds would be canceled
