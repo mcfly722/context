@@ -2,6 +2,7 @@ package context
 
 import (
 	"errors"
+	"sync"
 )
 
 // ErrCanceled ...
@@ -13,104 +14,61 @@ type Context struct {
 	parent      *Context
 	childs      map[int64]*Context
 	nextChildID int64
-	constructor chan *Context         // used to attach new Context to Context tree
-	destructor  chan *Context         // used to deattach old Context from Context tree
-	cancel      chan *cancelOperation // used to deattach Context and all child subcontexts
-	cancelDone  chan bool             // send signal when cancel done
-	onCancel    chan error            // used to send cancel error
-	desposed    chan bool             // used to submit all context tree changes before release runtime
+	onCancel    chan error
+
+	ready sync.Mutex
 }
 
-type cancelOperation struct {
-	context *Context
-	error   error
-}
-
-func (context *Context) cancelator(err error) {
-
-	for _, ctx := range context.childs {
-		// send Cancel to all upper levels
-		ctx.cancelator(err)
-	}
-
-	for _, ctx := range context.childs {
-
-		// for current level send cancelation to every child
-		ctx.onCancel <- err
-		<-ctx.desposed
-
-		delete(context.childs, ctx.id)
-	}
-
-}
-
-// NewRoot ...
-func NewRoot() *Context {
-	root := newEmptyContext(nil)
-
-	// here we use one goroutine for root for attach/deattach operations on context tree to do not use mutex'es (they are blocks all tree nodes and really slow).
-	go func() {
-		for {
-			select {
-			case newContext := <-root.constructor:
-				newContext.id = newContext.parent.nextChildID
-				newContext.parent.childs[newContext.id] = newContext
-				newContext.parent.nextChildID++
-
-			case cancelOperation := <-root.cancel:
-				cancelOperation.context.cancelator(cancelOperation.error)
-
-				cancelOperation.context.cancelDone <- true
-			}
-		}
-	}()
-
-	return root
+// Background ...
+func Background() *Context {
+	return newEmptyContext(0, nil)
 }
 
 // NewChildContext ...
 func (context *Context) NewChildContext() *Context {
-	newContext := newEmptyContext(context)
-	context.constructor <- newContext
+	context.ready.Lock()
+	newContext := newEmptyContext(context.nextChildID, context)
+	context.childs[context.nextChildID] = newContext
+	context.nextChildID++
+	context.ready.Unlock()
 	return newContext
 }
 
-func newEmptyContext(parent *Context) *Context {
-
-	newContext := &Context{
+func newEmptyContext(id int64, parent *Context) *Context {
+	return &Context{
+		id:          id,
 		parent:      parent,
 		childs:      make(map[int64]*Context),
 		nextChildID: 0,
 		onCancel:    make(chan error),
-		desposed:    make(chan bool),
-		cancelDone:  make(chan bool),
 	}
-
-	if parent == nil {
-		newContext.constructor = make(chan *Context)
-		newContext.destructor = make(chan *Context)
-		newContext.cancel = make(chan *cancelOperation)
-	} else {
-		newContext.constructor = parent.constructor
-		newContext.destructor = parent.destructor
-		newContext.cancel = parent.cancel
-	}
-
-	return newContext
 }
 
 // Cancel ...
 func (context *Context) Cancel(err error) {
 
-	operation := &cancelOperation{
-		context: context,
-		error:   err,
+	context.ready.Lock()
+	for _, ctx := range context.childs {
+		// send Cancel to all upper levels
+		ctx.Cancel(err)
 	}
 
-	context.cancel <- operation
+	for _, ctx := range context.childs {
+		// for current level send cancelation to every child
+		ctx.onCancel <- err
+	}
+	context.ready.Unlock()
 
-	// waiting till all childs and subchilds would be canceled
-	<-context.cancelDone
+	// wait until all childs have been disposed
+	for {
+		context.ready.Lock()
+		if len(context.childs) == 0 {
+			context.ready.Unlock()
+			return
+		}
+		context.ready.Unlock()
+	}
+
 }
 
 // OnCancel ...
@@ -120,6 +78,17 @@ func (context *Context) OnCancel() chan error {
 
 // Disposed ...
 func (context *Context) Disposed() {
-	//context.destructor <- context
-	context.desposed <- true
+
+	if context.parent != nil {
+
+		parent := context.parent
+
+		parent.ready.Lock()
+		if _, ok := parent.childs[context.id]; ok {
+			delete(parent.childs, context.id)
+		}
+		parent.ready.Unlock()
+
+	}
+
 }

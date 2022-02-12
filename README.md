@@ -9,28 +9,27 @@ To resolve this issue, this is separate implementation of context package, and i
 
 #### 1. Create root context:
 ```
-rootContext := context.NewRoot()
+context0 := context.Background()
 ```
 
 #### 2. Create childs and subchilds:
 ```
-childContext1 := rootContext.NewChildContext()
-childContext2 := childContext1.NewChildContext()
-childContext3 := childContext2.NewChildContext()
+context1 := context0.NewChildContext()
+context2 := context1.NewChildContext()
+context3 := context2.NewChildContext()
 ```
 
-#### 3. Use select for unblocking listening onCancel channel.
-When all context data have been released, call <b>Disposed()</b> method. It tells to framework that child completely released it resources and it's parent don't need wait it any more.
+#### 3. Wait for onCancel event
+When all context data have been released after <b>onCancel</b> event, call <b>Disposed()</b> method. It tells to framework that child completely released it resources and it's parent don't need wait this child any more.
 ```
 go func() {
   for {
     select {
-    case err := <-rootContext.OnCancel():
+    case err := <-ctx.OnCancel():
 
       fmt.Println(fmt.Sprintf("canceled (%v)", err))
 
-      rootContext.Disposed()         // <--- !!! Here we tell that context completely finished !!!
-
+      ctx.Disposed() //                   <--- !!! Here we tell that context completely finished !!!
       return
     }
   }
@@ -40,18 +39,12 @@ go func() {
 
 #### 4. Close context and all it's subchilds
 ```
-rootContext.Cancel(context.Canceled)
+context0.Cancel(context.Canceled)
 ```
 
 ### Limitations and specific
-1. There are no additional error checks so scenarios:<br>
+There are no additional error checks, so there are prohibited scenarios:<br>
 
 a) call <b>Cancel()</b> second time for same <b>context</b><br>
 b) cancel context without select and <b>OnCancel</b> handler<br>
 c) <b>OnCancel</b> handler without <b>Disposed()</b> method<br>
-
-this scenarios are not allowed and you should control it by yourself.
-
-2. There are no mutex'es in this module for any contexts to block operations between delete and add to childs in context tree.<br>
-Instead of it, it is implemented through several channels to root goroutine node which orchestrate all this collisions. This code little bit more complex, but stable and fast
-(race conditions and collisions tested in additional tests).
