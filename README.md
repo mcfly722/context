@@ -37,14 +37,17 @@ go func() {
 }()
 ```
 
-#### 4. Close context and all it's subchilds
+#### 4. Close context and all it's subchilds firing 'Cancel' event
 ```
 context0.Cancel(context.Canceled)
 ```
+
+Closing any of other childs contexts also allowed.
+
 
 ### Limitations and specific
 There are no additional error checks, so there are prohibited scenarios:<br>
 
 a) call <b>Cancel()</b> second time for same <b>context</b><br>
 b) cancel context without select and <b>OnCancel</b> handler<br>
-c) <b>OnCancel</b> handler without <b>Disposed()</b> method<br>
+c) <b>OnCancel</b> handler without <b>Disposed()</b> method (all <b>OnCancel()</b> events should finishes with <b>Disposed()</b> method)
