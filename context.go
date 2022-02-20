@@ -2,93 +2,203 @@ package context
 
 import (
 	"errors"
+	"fmt"
 	"sync"
+	"time"
+
+	"github.com/mcfly722/goPackages/scheduler"
 )
 
 // ErrCanceled ...
 var ErrCanceled = errors.New("context canceled")
 
+// ErrOutdated ...
+var ErrOutdated = errors.New("context outdated")
+
+// Disposer ...
+type Disposer func(err error)
+
 // Context ...
-type Context struct {
-	id          int64
-	parent      *Context
-	childs      map[int64]*Context
-	nextChildID int64
-	onCancel    chan error
+type Context interface {
+	NewChildContext(name string) Context
 
-	ready sync.Mutex
+	GetChild(id int64) Context
+
+	GetName() string
+
+	SetDisposer(Disposer)
+
+	SetDeadline(time.Time)
+
+	Cancel(err error)
+
+	OnDone() chan error
 }
 
-// Background ...
-func Background() *Context {
-	return newEmptyContext(0, nil)
+type ctx struct {
+	id              int64
+	name            string
+	parent          *ctx
+	childs          map[int64]*ctx
+	nextChildID     int64
+	onDone          chan error
+	tree            *tree
+	disposer        Disposer
+	disposedWithErr error
 }
 
-// NewChildContext ...
-func (context *Context) NewChildContext() *Context {
-	context.ready.Lock()
-	newContext := newEmptyContext(context.nextChildID, context)
-	context.childs[context.nextChildID] = newContext
-	context.nextChildID++
-	context.ready.Unlock()
+type tree struct {
+	scheduler      scheduler.Scheduler
+	onDestroy      chan bool
+	changesAllowed sync.Mutex
+}
+
+func (context *ctx) SetDisposer(disposer Disposer) {
+
+	context.tree.changesAllowed.Lock()
+	fmt.Printf("1+")
+	context.disposer = disposer
+	fmt.Printf("1-")
+	context.tree.changesAllowed.Unlock()
+}
+
+func (context *ctx) SetDeadline(deadline time.Time) {
+
+	context.tree.changesAllowed.Lock()
+	fmt.Printf("2+")
+	context.tree.scheduler.RegisterNewTimer(deadline, context)
+	fmt.Printf("2-")
+	context.tree.changesAllowed.Unlock()
+}
+
+func (context *ctx) cancel(err error) {
+	// calling disposer to dispose context resources
+	if context.disposer != nil {
+		context.disposer(err)
+	}
+	// delete all timers for current context from tree
+	context.tree.scheduler.CancelTimerFor(context)
+
+	// unbind context from it parent or destroy tree
+	if context.parent == nil {
+		context.tree.onDestroy <- true
+	} else {
+		delete(context.parent.childs, context.id)
+	}
+
+	context.onDone <- err
+
+	context.disposedWithErr = err
+}
+
+func (context *ctx) cancelRecursively(err error) {
+	childs := context.childs // this copy are required because parent context we will unlink from childs map
+
+	for _, child := range childs {
+		child.cancelRecursively(err)
+	}
+
+	context.cancel(err)
+}
+
+// NewContextTree ...
+func NewContextTree(name string) Context {
+
+	tree := &tree{
+		scheduler: scheduler.NewScheduler(),
+		onDestroy: make(chan bool),
+	}
+
+	newContext := &ctx{
+		id:          0,
+		name:        name,
+		childs:      make(map[int64]*ctx),
+		nextChildID: 1,
+		tree:        tree,
+		onDone:      make(chan error),
+	}
+
+	go func() {
+		for {
+			select {
+			case <-tree.onDestroy:
+				return
+			default:
+				outdatedContext := tree.scheduler.TakeFirstOutdatedOrNil()
+				if outdatedContext != nil {
+					tree.changesAllowed.Lock()
+					outdatedContext.(*ctx).cancelRecursively(ErrOutdated)
+					tree.changesAllowed.Unlock()
+				}
+			}
+		}
+	}()
+
 	return newContext
 }
 
-func newEmptyContext(id int64, parent *Context) *Context {
-	return &Context{
-		id:          id,
-		parent:      parent,
-		childs:      make(map[int64]*Context),
+// NewChildContext ...
+func (context *ctx) NewChildContext(name string) Context {
+
+	context.tree.changesAllowed.Lock()
+	//	fmt.Printf("4+")
+
+	defer context.tree.changesAllowed.Unlock()
+
+	newContext := &ctx{
+		id:          context.nextChildID,
+		name:        name,
+		parent:      context,
+		childs:      make(map[int64]*ctx),
 		nextChildID: 0,
-		onCancel:    make(chan error),
+		tree:        context.tree,
+		onDone:      make(chan error),
 	}
+
+	context.childs[context.nextChildID] = newContext
+	context.nextChildID++
+
+	if context.disposedWithErr != nil {
+		go func() {
+			newContext.cancel(context.disposedWithErr)
+		}()
+	}
+
+	//	fmt.Printf("4-")
+
+	return newContext
 }
 
-// Cancel ...
-func (context *Context) Cancel(err error) {
+// Cancel with reason Canceled(done)/Outdated
+func (context *ctx) Cancel(err error) {
 
-	context.ready.Lock()
-	for _, ctx := range context.childs {
-		// send Cancel to all upper levels
-		ctx.Cancel(err)
-	}
-
-	for _, ctx := range context.childs {
-		// for current level send cancelation to every child
-		ctx.onCancel <- err
-	}
-	context.ready.Unlock()
-
-	// wait until all childs have been disposed
-	for {
-		context.ready.Lock()
-		if len(context.childs) == 0 {
-			context.ready.Unlock()
-			return
-		}
-		context.ready.Unlock()
-	}
-
+	context.tree.changesAllowed.Lock()
+	//	fmt.Printf("5+")
+	context.cancelRecursively(err)
+	//	fmt.Printf("5-")
+	context.tree.changesAllowed.Unlock()
 }
 
-// OnCancel ...
-func (context *Context) OnCancel() chan error {
-	return context.onCancel
+func (context *ctx) OnDone() chan error {
+	return context.onDone
 }
 
-// Disposed ...
-func (context *Context) Disposed() {
+func (context *ctx) GetName() string {
+	return context.name
+}
 
-	if context.parent != nil {
+// GetChildContext ...
+func (context *ctx) GetChild(id int64) Context {
 
-		parent := context.parent
+	context.tree.changesAllowed.Lock()
 
-		parent.ready.Lock()
-		if _, ok := parent.childs[context.id]; ok {
-			delete(parent.childs, context.id)
-		}
-		parent.ready.Unlock()
+	defer func() {
+		context.tree.changesAllowed.Unlock()
+	}()
 
+	if child, ok := context.childs[id]; ok {
+		return child
 	}
 
+	return nil
 }
