@@ -9,7 +9,7 @@ To resolve this issue, this is separate implementation of context package, and i
 
 #### 1. Create root context:
 ```
-context0 := context.Background()
+context.NewContextTree()
 ```
 
 #### 2. Create childs and subchilds:
@@ -19,35 +19,43 @@ context2 := context1.NewChildContext()
 context3 := context2.NewChildContext()
 ```
 
-#### 3. Wait for onCancel event
-When all context data have been released after <b>onCancel</b> event, call <b>Disposed()</b> method. It tells to framework that child completely released it resources and it's parent don't need wait this child any more.
+#### 3. Specify disposer function (if required)
+This function would be called on cancel event for current context when parent cancel it before OnDone event.
+```
+context.SetDisposer(func(err error) {
+  fmt.Println(fmt.Sprintf("disposed with cause: %v", err))
+})
+```
+
+#### 4. Specify deadline for context (if required)
+```
+context.SetDeadline(time.Now().Add(time.Second * 1))
+```
+
+#### 5. Specify OnDone() handler to exit from goroutine (always required!)
 ```
 go func() {
   for {
     select {
-    case err := <-ctx.OnCancel():
-
-      fmt.Println(fmt.Sprintf("canceled (%v)", err))
-
-      ctx.Disposed() //                   <--- !!! Here we tell that context completely finished !!!
+    case err := <-ctx.OnDone():  // OnDone signal tells that context goroutine could be closed
+                                 // immediately (all context resources already have been disposed)
       return
+
+    default:
+      {
+        // some work...Do Not stay with empty Default!
+      }
     }
   }
-
 }()
 ```
 
-#### 4. Close context and all it's subchilds firing 'Cancel' event
+#### 6. Call context cancelling with some reason
 ```
-context0.Cancel(context.Canceled)
+context0.Cancel(context.ErrCanceled)
 ```
-
-Closing any of other childs contexts also allowed.
 
 
 ### Limitations and specific
-There are no additional error checks, so there are prohibited scenarios:<br>
-
-a) call <b>Cancel()</b> second time for same <b>context</b><br>
-b) cancel context without select and <b>OnCancel</b> handler<br>
-c) <b>OnCancel</b> handler without <b>Disposed()</b> method (all <b>OnCancel()</b> events should finishes with <b>Disposed()</b> method)
+* Always use OnDone() handler. Context always tries to send this event on cancel, so, if would not any reader obtain this event from this channel, program just hanged.
+* Create new child context only after successfull start new connection/execution/other your job directly before select loop (otherwise it exits on error and OnDone() handler would be missed).
