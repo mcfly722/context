@@ -2,7 +2,6 @@ package context
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -23,8 +22,6 @@ type Context interface {
 	NewChildContext(name string) Context
 
 	GetChild(id int64) Context
-
-	GetName() string
 
 	SetDisposer(Disposer)
 
@@ -54,20 +51,14 @@ type tree struct {
 }
 
 func (context *ctx) SetDisposer(disposer Disposer) {
-
 	context.tree.changesAllowed.Lock()
-	fmt.Printf("1+")
 	context.disposer = disposer
-	fmt.Printf("1-")
 	context.tree.changesAllowed.Unlock()
 }
 
 func (context *ctx) SetDeadline(deadline time.Time) {
-
 	context.tree.changesAllowed.Lock()
-	fmt.Printf("2+")
 	context.tree.scheduler.RegisterNewTimer(deadline, context)
-	fmt.Printf("2-")
 	context.tree.changesAllowed.Unlock()
 }
 
@@ -141,7 +132,6 @@ func NewContextTree(name string) Context {
 func (context *ctx) NewChildContext(name string) Context {
 
 	context.tree.changesAllowed.Lock()
-	//	fmt.Printf("4+")
 
 	defer context.tree.changesAllowed.Unlock()
 
@@ -164,27 +154,18 @@ func (context *ctx) NewChildContext(name string) Context {
 		}()
 	}
 
-	//	fmt.Printf("4-")
-
 	return newContext
 }
 
 // Cancel with reason Canceled(done)/Outdated
 func (context *ctx) Cancel(err error) {
-
 	context.tree.changesAllowed.Lock()
-	//	fmt.Printf("5+")
 	context.cancelRecursively(err)
-	//	fmt.Printf("5-")
 	context.tree.changesAllowed.Unlock()
 }
 
 func (context *ctx) OnDone() chan error {
 	return context.onDone
-}
-
-func (context *ctx) GetName() string {
-	return context.name
 }
 
 // GetChildContext ...
