@@ -12,7 +12,7 @@ func buildTree(context context.Context, currentPath string, width int, depth int
 
 	if depth > 0 {
 
-		context := context.NewChildContext(currentPath)
+		context := context.NewChildContext()
 
 		context.SetDisposer(func(err error) {
 			fmt.Println(fmt.Sprintf("%v disposed", currentPath))
@@ -42,7 +42,7 @@ func buildTree(context context.Context, currentPath string, width int, depth int
 }
 
 func Test_CancelHive(t *testing.T) {
-	rootContext := context.NewContextTree("0")
+	rootContext := context.NewContextTree()
 
 	ctx := buildTree(rootContext, "0", 3, 5)
 
@@ -56,7 +56,7 @@ func Test_CancelHive(t *testing.T) {
 }
 
 func Test_CancelHiveByTimeout(t *testing.T) {
-	rootContext := context.NewContextTree("0")
+	rootContext := context.NewContextTree()
 
 	ctx := buildTree(rootContext, "0", 3, 5)
 
@@ -69,7 +69,7 @@ func Test_CancelHiveByTimeout(t *testing.T) {
 }
 
 func Test_CancelRoot(t *testing.T) {
-	rootContext := context.NewContextTree("0")
+	rootContext := context.NewContextTree()
 
 	ctx := buildTree(rootContext, "0", 3, 5)
 
@@ -83,7 +83,7 @@ func Test_CancelRoot(t *testing.T) {
 }
 
 func Test_CancelOnlyRoot(t *testing.T) {
-	rootContext := context.NewContextTree("0")
+	rootContext := context.NewContextTree()
 
 	go func() {
 		for {
@@ -97,3 +97,10 @@ func Test_CancelOnlyRoot(t *testing.T) {
 	fmt.Println("\n\ncanceling 0")
 	rootContext.Cancel(context.ErrCanceled)
 }
+
+/*
+func Test_RaceTree(t *testing.T) {
+		rootContext := context.NewContextTree()
+		ctx := buildTree(rootContext, "0", 3, 5)
+}
+*/

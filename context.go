@@ -19,7 +19,7 @@ type Disposer func(err error)
 
 // Context ...
 type Context interface {
-	NewChildContext(name string) Context
+	NewChildContext() Context
 
 	GetChild(id int64) Context
 
@@ -34,7 +34,6 @@ type Context interface {
 
 type ctx struct {
 	id              int64
-	name            string
 	parent          *ctx
 	childs          map[int64]*ctx
 	nextChildID     int64
@@ -93,7 +92,7 @@ func (context *ctx) cancelRecursively(err error) {
 }
 
 // NewContextTree ...
-func NewContextTree(name string) Context {
+func NewContextTree() Context {
 
 	tree := &tree{
 		scheduler: scheduler.NewScheduler(),
@@ -102,7 +101,6 @@ func NewContextTree(name string) Context {
 
 	newContext := &ctx{
 		id:          0,
-		name:        name,
 		childs:      make(map[int64]*ctx),
 		nextChildID: 1,
 		tree:        tree,
@@ -129,7 +127,7 @@ func NewContextTree(name string) Context {
 }
 
 // NewChildContext ...
-func (context *ctx) NewChildContext(name string) Context {
+func (context *ctx) NewChildContext() Context {
 
 	context.tree.changesAllowed.Lock()
 
@@ -137,7 +135,6 @@ func (context *ctx) NewChildContext(name string) Context {
 
 	newContext := &ctx{
 		id:          context.nextChildID,
-		name:        name,
 		parent:      context,
 		childs:      make(map[int64]*ctx),
 		nextChildID: 0,
