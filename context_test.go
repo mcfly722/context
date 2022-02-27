@@ -2,105 +2,100 @@ package context_test
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/mcfly722/goPackages/context"
 )
 
-func buildTree(context context.Context, currentPath string, width int, depth int) context.Context {
+var contextTree map[string]context.Context = make(map[string]context.Context)
+var contextTreeReady sync.Mutex
+
+func buildTree(parent context.Context, currentPath string, width int, depth int) context.Context {
 
 	if depth > 0 {
 
-		context := context.NewChildContext()
+		onDone := make(chan bool)
 
-		context.SetDisposer(func(err error) {
-			fmt.Println(fmt.Sprintf("%v disposed", currentPath))
-		})
+		ctx, err := parent.NewChildContext(
+			func(reason context.Reason) { // Disposer
+				fmt.Println(fmt.Sprintf("%v disposed", currentPath))
+			}, func(reason context.Reason) { // Finalizer
+				onDone <- true
+			})
 
-		for i := 0; i < width; i++ {
-			buildTree(context, fmt.Sprintf("%v->%v", currentPath, i), width, depth-1)
+		if err != nil {
+			fmt.Printf(fmt.Sprintf("error: %v", err))
+			return nil
 		}
 
-		fmt.Println(fmt.Sprintf("created %v", currentPath))
+		for i := 0; i < width; i++ {
+			buildTree(ctx, fmt.Sprintf("%v->%v", currentPath, i), width, depth-1)
+		}
+
+		contextTreeReady.Lock()
+		fmt.Println(fmt.Sprintf("[%v] created %v", len(contextTree), currentPath))
+		contextTree[currentPath] = ctx
+		contextTreeReady.Unlock()
 
 		go func() {
 
 			for {
 				select {
-				case <-context.OnDone():
-					fmt.Println(fmt.Sprintf("%v closed", currentPath))
+				case <-onDone:
+					fmt.Println(fmt.Sprintf("[%v] finished", currentPath))
 					return
 				}
 			}
-
 		}()
 
-		return context
+		return ctx
 	}
+
 	return nil
 }
 
 func Test_CancelHive(t *testing.T) {
-	rootContext := context.NewContextTree()
 
-	ctx := buildTree(rootContext, "0", 3, 5)
+	onDone := make(chan bool)
 
-	//time.Sleep(1 * time.Millisecond)
-	fmt.Println("\n\ncanceling 0->2->1->...")
-	ctx.GetChild(2).GetChild(1).Cancel(context.ErrCanceled)
+	rootContext := context.NewContextTree(
+		func(reason context.Reason) {
+			fmt.Println(fmt.Sprintf("root disposed. Reason=%v", reason))
+		}, func(reason context.Reason) {
+			fmt.Println(fmt.Sprintf("root finished. Reason=%v", reason))
+			onDone <- true
+		})
 
-	//time.Sleep(2 * time.Millisecond)
+	buildTree(rootContext, "0", 3, 5)
 
-	fmt.Println("finished")
-}
+	fmt.Println("\n\nCancelling 0->1->2")
+	contextTree["0->1->2"].Cancel(context.ReasonCanceled)
 
-func Test_CancelHiveByTimeout(t *testing.T) {
-	rootContext := context.NewContextTree()
+	fmt.Println("\n\nCancelling 0")
+	rootContext.Cancel(context.ReasonCanceled)
 
-	ctx := buildTree(rootContext, "0", 3, 5)
+	<-onDone
 
-	//time.Sleep(1 * time.Millisecond)
-	fmt.Println("\n\ncanceling 0->2->1->... by timeout")
-	ctx.GetChild(2).GetChild(1).SetDeadline(time.Now().Add(1 * time.Millisecond))
-	//time.Sleep(2 * time.Millisecond)
-
-	fmt.Println("finished")
-}
-
-func Test_CancelRoot(t *testing.T) {
-	rootContext := context.NewContextTree()
-
-	ctx := buildTree(rootContext, "0", 3, 5)
-
-	//time.Sleep(1 * time.Millisecond)
-	fmt.Println("\n\ncanceling 0")
-	ctx.Cancel(context.ErrCanceled)
-
-	//time.Sleep(2 * time.Millisecond)
+	time.Sleep(time.Second * 1)
 
 	fmt.Println("finished")
-}
-
-func Test_CancelOnlyRoot(t *testing.T) {
-	rootContext := context.NewContextTree()
-
-	go func() {
-		for {
-			select {
-			case <-rootContext.OnDone():
-				return
-			}
-		}
-	}()
-
-	fmt.Println("\n\ncanceling 0")
-	rootContext.Cancel(context.ErrCanceled)
 }
 
 /*
-func Test_RaceTree(t *testing.T) {
-		rootContext := context.NewContextTree()
-		ctx := buildTree(rootContext, "0", 3, 5)
+func Test_CancelRoot(t *testing.T) {
+
+	rootContext := context.NewContextTree(func(reason context.Reason) {
+		fmt.Println(fmt.Sprintf("root disposed. Reason=%v", reason))
+	}, nil)
+
+	buildTree(rootContext, "0", 5, 7)
+
+	rootContext.Cancel(context.ReasonCanceled)
+
+	time.Sleep(time.Second * 1)
+
+	fmt.Println(fmt.Sprintf("finished. mapSize = %v", len(contextTree)))
 }
 */
