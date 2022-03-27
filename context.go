@@ -14,9 +14,6 @@ type Reason error
 // Disposer ...
 type Disposer func(reason Reason)
 
-// Finalizer ...
-type Finalizer func(reason Reason)
-
 // ReasonCanceled ...
 var ReasonCanceled = (Reason)(errors.New("context canceled"))
 
@@ -28,7 +25,7 @@ var ErrCreatingOnCanceled = errors.New("Context already canceled. Creating new c
 
 // Context ...
 type Context interface {
-	NewChildContext(Disposer, Finalizer) (Context, error)
+	NewChildContext(Disposer, chan bool) (Context, error)
 
 	SetDeadline(time.Time)
 
@@ -42,8 +39,8 @@ type ctx struct {
 	nextChildID int64
 	tree        *tree
 	disposer    Disposer
-	finalizer   Finalizer
 	canceled    Reason
+	onDone      chan bool
 	ready       sync.Mutex
 }
 
@@ -88,8 +85,9 @@ func (context *ctx) cancel(reason Reason) {
 	context.canceled = reason
 
 	// finish context
-	if context.finalizer != nil {
-		context.finalizer(reason)
+	if context.onDone != nil {
+		//fmt.Println(fmt.Sprintf("onDone"))
+		context.onDone <- true
 	}
 }
 
@@ -104,7 +102,7 @@ func (context *ctx) cancelRecursively(reason Reason) {
 }
 
 // NewContextTree ...
-func NewContextTree(disposer Disposer, finalizer Finalizer) Context {
+func NewContextTree(disposer Disposer, onDone chan bool) Context {
 
 	tree := &tree{
 		scheduler: scheduler.NewScheduler(),
@@ -118,7 +116,7 @@ func NewContextTree(disposer Disposer, finalizer Finalizer) Context {
 		nextChildID: 1,
 		tree:        tree,
 		disposer:    disposer,
-		finalizer:   finalizer,
+		onDone:      onDone,
 		canceled:    nil,
 	}
 
@@ -147,7 +145,7 @@ func NewContextTree(disposer Disposer, finalizer Finalizer) Context {
 }
 
 // NewChildContext ...
-func (context *ctx) NewChildContext(disposer Disposer, finalizer Finalizer) (Context, error) {
+func (context *ctx) NewChildContext(disposer Disposer, onDone chan bool) (Context, error) {
 	context.tree.changesAllowed.Lock()
 	defer context.tree.changesAllowed.Unlock()
 
@@ -162,7 +160,7 @@ func (context *ctx) NewChildContext(disposer Disposer, finalizer Finalizer) (Con
 		nextChildID: 0,
 		tree:        context.tree,
 		disposer:    disposer,
-		finalizer:   finalizer,
+		onDone:      onDone,
 		canceled:    nil,
 	}
 
@@ -174,10 +172,8 @@ func (context *ctx) NewChildContext(disposer Disposer, finalizer Finalizer) (Con
 
 // Cancel with reason Canceled(done)/Outdated/etc...
 func (context *ctx) Cancel(reason Reason) {
-	go func() {
-		context.tree.onCancel <- cancel{
-			context: context,
-			reason:  reason,
-		}
-	}()
+	context.tree.onCancel <- cancel{
+		context: context,
+		reason:  reason,
+	}
 }
