@@ -1,35 +1,26 @@
 package context
 
 import (
-	"errors"
 	"sync"
-	"time"
-
-	"github.com/mcfly722/goPackages/scheduler"
 )
 
-// Reason ...
-type Reason error
-
-// Disposer ...
-type Disposer func(reason Reason)
-
-// ReasonCanceled ...
-var ReasonCanceled = (Reason)(errors.New("context canceled"))
-
-// ReasonOutdated ...
-var ReasonOutdated = (Reason)(errors.New("context outdated"))
-
-// ErrCreatingOnCanceled ...
-var ErrCreatingOnCanceled = errors.New("Context already canceled. Creating new childs for canceled context are prohibited")
+const maxCancelCallsBeforeOnDoneReached int = 3 // you have select {} loop and could be several Close() calls from different events. To do not block execution for unblocking send, used channel with this length. This value should be >= 1. (ideal is to have unlimited lenght nonblocking channel, but it needs additional implementation)
 
 // Context ...
 type Context interface {
-	NewChildContext(Disposer, chan bool) (Context, error)
+	NewContextFor(instance ContextedInstance) Context
+	OnDone() chan bool // buffered channel with size=1. It is essential to do not block on a send onDone to do not stuck if GoRun method has no OnDone check.
+	Wait()
+}
 
-	SetDeadline(time.Time)
+// ContextedInstance ...
+type ContextedInstance interface {
+	GoContextBody(current Context) // here we could put our events loop and wait timeouts/events/onDone signal
+	Dispose()                      // Dispose fires only when current and all child GoRun's has been finished. It is garantee that there are no any other resources/calls which tries to use current context, this context could be gracefully closed
+}
 
-	Cancel(Reason)
+type tree struct {
+	changesAllowed sync.Mutex
 }
 
 type ctx struct {
@@ -37,143 +28,107 @@ type ctx struct {
 	parent      *ctx
 	childs      map[int64]*ctx
 	nextChildID int64
-	tree        *tree
-	disposer    Disposer
-	canceled    Reason
+	instance    ContextedInstance
+	waitGroup   sync.WaitGroup
 	onDone      chan bool
-	ready       sync.Mutex
+	closed      bool
+	tree        *tree
 }
 
-type tree struct {
-	scheduler      scheduler.Scheduler
-	onDestroy      chan bool
-	onCancel       chan cancel
-	changesAllowed sync.Mutex
-}
-
-type cancel struct {
-	context *ctx
-	reason  Reason
-}
-
-func (context *ctx) SetDeadline(deadline time.Time) {
-	context.ready.Lock()
-	defer context.ready.Unlock()
-
-	context.tree.scheduler.RegisterNewTimer(deadline, context)
-}
-
-func (context *ctx) cancel(reason Reason) {
-
-	if context.canceled != nil {
-		panic("trying to cancel already cancelled context")
-	}
-
-	// dispose context
-	if context.disposer != nil {
-		context.disposer(reason)
-	}
-
-	// delete all timers for current context from tree
-	context.tree.scheduler.CancelTimerFor(context)
-
-	// unbind context from it parent or destroy tree if it is root context
-	if context.parent != nil {
-		delete(context.parent.childs, context.id)
-	}
-
-	context.canceled = reason
-
-	// finish context
-	if context.onDone != nil {
-		//fmt.Println(fmt.Sprintf("onDone"))
-		context.onDone <- true
-	}
-}
-
-func (context *ctx) cancelRecursively(reason Reason) {
-	childs := context.childs // this copy are required because parent context we will unlink from childs map
-
-	for _, child := range childs {
-		child.cancelRecursively(reason)
-	}
-
-	context.cancel(reason)
-}
-
-// NewContextTree ...
-func NewContextTree(disposer Disposer, onDone chan bool) Context {
-
-	tree := &tree{
-		scheduler: scheduler.NewScheduler(),
-		onCancel:  make(chan cancel),
-		onDestroy: make(chan bool),
-	}
+// NewContextFor generates new context tree
+func NewContextFor(instance ContextedInstance) Context {
 
 	newContext := &ctx{
 		id:          0,
+		parent:      nil,
 		childs:      make(map[int64]*ctx),
-		nextChildID: 1,
-		tree:        tree,
-		disposer:    disposer,
-		onDone:      onDone,
-		canceled:    nil,
+		nextChildID: 0,
+		instance:    instance,
+		onDone:      make(chan bool, maxCancelCallsBeforeOnDoneReached),
+		closed:      false,
+		tree:        &tree{},
 	}
 
-	go func() {
-		for {
-			select {
-			case cancel := <-tree.onCancel:
-				cancel.context.tree.changesAllowed.Lock()
-				defer cancel.context.tree.changesAllowed.Unlock()
-				cancel.context.cancelRecursively(cancel.reason)
-				if cancel.context.parent == nil { // cancelling root node
-					return
-				}
-			default:
-				outdatedContext := tree.scheduler.TakeFirstOutdatedOrNil()
-				if outdatedContext != nil {
-					tree.changesAllowed.Lock()
-					outdatedContext.(*ctx).cancelRecursively(ReasonOutdated)
-					tree.changesAllowed.Unlock()
-				}
-			}
-		}
-	}()
+	newContext.start()
 
 	return newContext
 }
 
-// NewChildContext ...
-func (context *ctx) NewChildContext(disposer Disposer, onDone chan bool) (Context, error) {
-	context.tree.changesAllowed.Lock()
-	defer context.tree.changesAllowed.Unlock()
+// StartNewFor ...
+func (context *ctx) NewContextFor(instance ContextedInstance) Context {
 
-	if context.canceled != nil {
-		return nil, ErrCreatingOnCanceled
-	}
+	// attach to parent new child
+	parent := context
+
+	context.tree.changesAllowed.Lock()
 
 	newContext := &ctx{
-		id:          context.nextChildID,
-		parent:      context,
+		id:          parent.nextChildID,
+		parent:      parent,
 		childs:      make(map[int64]*ctx),
 		nextChildID: 0,
-		tree:        context.tree,
-		disposer:    disposer,
-		onDone:      onDone,
-		canceled:    nil,
+		instance:    instance,
+		onDone:      make(chan bool, maxCancelCallsBeforeOnDoneReached),
+		closed:      parent.closed,
+		tree:        parent.tree,
 	}
 
-	context.childs[context.nextChildID] = newContext
-	context.nextChildID++
+	parent.childs[parent.nextChildID] = newContext
+	parent.nextChildID++
 
-	return newContext, nil
+	parent.waitGroup.Add(1)
+
+	parent.tree.changesAllowed.Unlock()
+
+	newContext.start()
+
+	return newContext
+
 }
 
-// Cancel with reason Canceled(done)/Outdated/etc...
-func (context *ctx) Cancel(reason Reason) {
-	context.tree.onCancel <- cancel{
-		context: context,
-		reason:  reason,
-	}
+func (context *ctx) start() {
+	go func(ctx *ctx) {
+
+		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
+			ctx.instance.GoContextBody(ctx)
+		}
+
+		{ // stop all childs contexts
+			for _, child := range ctx.childs {
+				child.onDone <- true
+			}
+			//  and wait them
+			ctx.waitGroup.Wait()
+		}
+
+		{ // all childs and subchilds contexts has been stopped and disposed, we can gracefully dispose current context resources
+			ctx.instance.Dispose()
+		}
+
+		{ // for parent, this context excluded from wait group
+			if ctx.parent != nil {
+				ctx.parent.waitGroup.Done()
+			}
+		}
+
+		{ // unbind closed context from tree
+			ctx.tree.changesAllowed.Lock()
+			if ctx.parent != nil {
+				delete(ctx.childs, ctx.id)
+			}
+			ctx.tree.changesAllowed.Unlock()
+		}
+
+	}(context)
+
+}
+
+// OnDone ...
+func (context *ctx) OnDone() chan bool {
+	return context.onDone
+}
+
+// Wait ...
+func (context *ctx) Wait() {
+	context.waitGroup.Wait()
 }
