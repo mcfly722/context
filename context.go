@@ -15,8 +15,8 @@ type Context interface {
 
 // ContextedInstance ...
 type ContextedInstance interface {
-	GoContextBody(current Context) // here we could put our events loop and wait timeouts/events/onDone signal
-	Dispose()                      // Dispose fires only when current and all child GoRun's has been finished. It is garantee that there are no any other resources/calls which tries to use current context, this context could be gracefully closed
+	Go(current Context) // here we could put our events loop and wait timeouts/events/onDone signal
+	Dispose()           // Dispose fires only when current and all child GoRun's has been finished. It is garantee that there are no any other resources/calls which tries to use current context, this context could be gracefully closed
 }
 
 type tree struct {
@@ -90,7 +90,7 @@ func (context *ctx) start() {
 	go func(ctx *ctx) {
 
 		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
-			ctx.instance.GoContextBody(ctx)
+			ctx.instance.Go(ctx)
 		}
 
 		{ // stop all childs contexts

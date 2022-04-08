@@ -22,7 +22,7 @@ func newNode(name string) *node {
 	}
 }
 
-func (node *node) GoContextBody(current context.Context) {
+func (node *node) Go(current context.Context) {
 
 	fmt.Println(fmt.Sprintf("[%v] started", node.name))
 
