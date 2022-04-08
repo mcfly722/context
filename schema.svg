@@ -1,0 +1,189 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:v="http://vecta.io" width="1123" height="794" viewBox="0 0 1123 794">
+    <defs>
+        <style>@import url("https://fonts.googleapis.com/css?family=Roboto:400,400i,700,700i");</style>
+        <g id="thin.end">
+            <path d="M 0 0 L 3 10 L -3 10 Z" stroke="none"/>
+        </g>
+    </defs>
+    <g transform="translate(449.5 99.5)">
+        <rect fill="#65cd76" height="250" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="250" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="6px">
+                <tspan font-size="12px" x="25" y="118.16">Go</tspan>
+                <tspan x="25" y="125.36"/>
+                <tspan font-size="12px" x="25" y="139.76">(select)</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(449.5 479.5)">
+        <rect fill="#ff6666" height="70" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="70" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="12px">
+                <tspan x="25" y="38.96">Dispose</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(549.5 179.5)">
+        <rect fill="#65cd76" height="180" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="180" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="6px">
+                <tspan font-size="12px" x="25" y="83.16">Go</tspan>
+                <tspan x="25" y="90.36"/>
+                <tspan font-size="12px" x="25" y="104.76">(select)</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(649.5 199.5)">
+        <rect fill="#65cd76" height="170" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="170" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="12px">
+                <tspan x="25" y="74.56">Go</tspan>
+                <tspan x="25" y="88.96"/>
+                <tspan x="25" y="103.36">(select)</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(649.5 369.5)">
+        <rect fill="#ff6666" height="50" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="50" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="12px">
+                <tspan x="25" y="28.96">Dispose</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(549.5 419.5)">
+        <rect fill="#ff6666" height="60" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="60" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="12px">
+                <tspan x="25" y="33.96">Dispose</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(549.5 359.5)">
+        <rect fill="#c1c1c1" height="60" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="60" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1">
+                <tspan x="25" y="34.62">waiting</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(449.5 349.5)">
+        <rect fill="#c1c1c1" height="130" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="130" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1">
+                <tspan x="25" y="69.62">waiting</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(499.5 179.5)">
+        <path d="M 1e-13 1e-13 L 40.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(90 50 0)" x="50" xlink:href="#thin.end" y="0"/>
+    </g>
+    <g transform="translate(599.5 199.5)">
+        <path d="M 1e-13 1e-13 L 40.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(90 50 0)" x="50" xlink:href="#thin.end" y="0"/>
+    </g>
+    <g transform="translate(504.500030517578 164.499984741211)">
+        <rect fill="none" height="10" stroke="none" width="40.000030517578" x="0" y="0"/>
+        <g transform="translate(-5 0)" class="Text.cls">
+            <rect x="0" y="0" width="104.999969482422" height="10" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1">
+                <tspan x="52.499984741211" y="9.62">NewContextFor</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(509.500030517578 169.499984741211)">
+        <rect fill="none" height="10" stroke="none" width="40.000030517578" x="0" y="0"/>
+        <g transform="translate(90 15)" class="Text.cls">
+            <rect x="0" y="0" width="104.999969482422" height="10" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1">
+                <tspan x="52.499984741211" y="9.62">NewContextFor</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(399.500030517578 84.499984741211)">
+        <rect fill="none" height="10" stroke="none" width="40.000030517578" x="0" y="0"/>
+        <g transform="translate(-5 0)" class="Text.cls">
+            <rect x="0" y="0" width="104.999969482422" height="10" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1">
+                <tspan x="52.499984741211" y="9.62">NewContextFor</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(399.5 99.5)">
+        <path d="M 1e-13 1e-13 L 40.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(90 50 0)" x="50" xlink:href="#thin.end" y="0"/>
+    </g>
+    <g transform="translate(399.5 99.5)">
+        <path d="M 1e-13 1e-13 L 0 440.5" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(180.000002504478 0 450)" x="0" xlink:href="#thin.end" y="450"/>
+    </g>
+    <g transform="translate(344.500030517578 549.5)">
+        <rect fill="none" height="25" stroke="none" width="60" x="0" y="0"/>
+        <g transform="translate(45 -420)" class="Text.cls">
+            <rect x="0" y="0" width="64.999969482422" height="25" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="10px">
+                <tspan x="32.499984741211" y="15.8">ctx.Wait()</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(599.5 419.5)">
+        <path d="M 50 0 L 9.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(270.000005008956 0 0)" x="0" xlink:href="#thin.end" y="0"/>
+    </g>
+    <g transform="translate(499.5 479.5)">
+        <path d="M 50 0 L 9.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(270.000005008956 0 0)" x="0" xlink:href="#thin.end" y="0"/>
+    </g>
+    <g transform="translate(399.5 549.5)">
+        <path d="M 50 0 L 9.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(270.000005008956 0 0)" x="0" xlink:href="#thin.end" y="0"/>
+    </g>
+    <g transform="translate(399.5 549.5)">
+        <path d="M 1e-13 1e-13 L 0 40.5" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(180.000002504478 0 50)" x="0" xlink:href="#thin.end" y="50"/>
+    </g>
+    <g transform="translate(499.5 349.5)">
+        <path d="M 1e-13 1e-13 L 40.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(90 50 0)" x="50" xlink:href="#thin.end" y="0"/>
+    </g>
+    <g transform="translate(499.5 334.5)">
+        <rect fill="none" height="15" stroke="none" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="15" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="9px">
+                <tspan x="25" y="10.47">onDone()</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(599.5 344.5)">
+        <rect fill="none" height="15" stroke="none" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="15" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="9px">
+                <tspan x="25" y="10.47">onDone()</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(449.5 329.5)">
+        <rect fill="none" height="20" stroke="none" width="50" x="0" y="0"/>
+        <g class="Text.cls">
+            <rect x="0" y="0" width="50" height="20" fill="none" stroke="none"/>
+            <text fill="#000000" fill-opacity="1" font-size="12px">
+                <tspan x="25" y="13.96">timeout</tspan>
+            </text>
+        </g>
+    </g>
+    <g transform="translate(599.5 359.5)">
+        <path d="M 1e-13 1e-13 L 40.5 0" fill="none"/>
+        <use class="EndArrow.cls" fill="#000000" transform="scale(1) rotate(90 50 0)" x="50" xlink:href="#thin.end" y="0"/>
+    </g>
+</svg>
