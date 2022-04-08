@@ -8,10 +8,10 @@ To resolve this issue, this is another implementation of context package, and it
 
 ### How to use it:
 
-Full example you can find in ![context_test.go](https://github.com/mcfly722/goPackages/blob/main/context/context_test.go)
+Full example you can find in [context_test.go](https://github.com/mcfly722/goPackages/blob/main/context/context_test.go)
 
 #### 1. Implement context.ContextedInstance interface
-Define your instance with <b>Go(..)</b> and <b>Dispose()</b> methods
+Define your instance with <b>Go(..)</b> and <b>Dispose()</b> methods:
 ```
 type node struct {
   close chan bool
@@ -60,11 +60,11 @@ newCtx3 := newCtx2.NewContextFor(node3)
 ...
 ```
 #### 4. Closing
-When you send <b>close</b> signal to your node, your node exits from Go() loop and goroutine closes. It means, that there are no more child contexts for this node would be created. After that, for all subchilds and childs this library sends OnDone() signal and waits till they closes. Disposer for any node will fires only after all it childs an subchilds would be disposed.
+When you send <b><-close()</b> signal to your node, your node context <b>Go(...){...}</b> exits from its loop and goroutine closes. It means, that there are no more child contexts for this node would be created. After that, for all subchilds and childs this library sends OnDone() signal and waits till they closes hierarchically (parents <b>Disposer()</b>'s closes only after all their childs would be closed).
 
 #### Recomendations and limitations
  1. you have always use <b>OnDone()</b> signal check and exits from your select loop when it comes, otherwise your parent goroutine hangs on closing
- 2. create new child context only after your context resources initializations and checks occurs.<br> After creating new child context through <b>NewContextFor(...)</b> method, it starts context goroutine, so, all context resources should be already initialized. Do not initialize any resources in your <b>Go(...)</b> method, initialize them before context creating.
- 3. there are no any <b>Schedulers</b>, <b>Values</b> and <b>Close()</b> methods like in original library. All this stuff you can easily to do by your self. My purpose here is to create this library as lightweight and as possible. Testing tree parallelism for race conditions are really really hard thing. I totally rewrites and refactored this small piece of code at least <b>8</b> times, until it becomes as simple and predictable as possible.
+ 2. create new child context only after your context resources initializations and checks occurs.<br> After creating new child context through <b>NewContextFor(...)</b> method, it starts new context goroutine, so, all context resources should be already initialized. Do not initialize any resources in your <b>Go(...)</b> method, initialize them before context creating. It would be simpler to close them in <b>Dispose()</b> method.
+ 3. there are no any <b>Schedulers</b>, <b>Values</b> and <b>Close()</b> methods like in original library. All this stuff you can easily to do by your self in Node{} struct and in select check. My purpose here is to create this library as lightweight and as possible. Testing tree parallelism for race conditions are really really hard thing, I totally rewrites and refactored this small piece of code at least <b>8</b> times, until it becomes as simple and predictable as possible.
 <br><br>
 If you have any suggestions or recommendations, please, use issue tracker, I would be glad to help.
