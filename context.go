@@ -1,6 +1,7 @@
 package context
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -37,6 +38,7 @@ type ctx struct {
 
 // NewContextFor generates new context tree
 func NewContextFor(instance ContextedInstance) Context {
+	fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
 	newContext := &ctx{
 		id:          0,
