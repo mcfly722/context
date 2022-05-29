@@ -30,6 +30,7 @@ type ctx struct {
 	nextChildID int64
 	instance    ContextedInstance
 	waitGroup   sync.WaitGroup
+	currentLoop sync.WaitGroup
 	onDone      chan bool
 	closed      bool
 	tree        *tree
@@ -87,11 +88,13 @@ func (context *ctx) NewContextFor(instance ContextedInstance) Context {
 }
 
 func (context *ctx) start() {
+
+	context.currentLoop.Add(1)
+
 	go func(ctx *ctx) {
 
 		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
 			ctx.instance.Go(ctx)
-			ctx.waitGroup.Done() // done main loop for root
 		}
 
 		{ // stop all childs contexts
@@ -104,6 +107,7 @@ func (context *ctx) start() {
 
 		{ // all childs and subchilds contexts has been stopped and disposed, we can gracefully dispose current context resources
 			ctx.instance.Dispose()
+			ctx.currentLoop.Done()
 		}
 
 		{ // for parent, this context excluded from wait group
@@ -121,8 +125,6 @@ func (context *ctx) start() {
 		}
 
 	}(context)
-
-	context.waitGroup.Add(1) // for root, otherwise it woud be exit without entering
 }
 
 // OnDone ...
@@ -132,5 +134,6 @@ func (context *ctx) OnDone() chan bool {
 
 // Wait ...
 func (context *ctx) Wait() {
-	context.waitGroup.Wait()
+	context.waitGroup.Wait()   // wait all childs
+	context.currentLoop.Wait() // wait for current context disposing
 }
