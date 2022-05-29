@@ -37,7 +37,7 @@ loop:
 
 	}
 
-	//fmt.Println(fmt.Sprintf("[%v] finished", node.name))
+	// fmt.Println(fmt.Sprintf("[%v] finished", node.name))
 }
 
 func (node *node) Dispose() {
@@ -73,4 +73,38 @@ func Test_SimpleTree(t *testing.T) {
 	fmt.Println("waiting for closing")
 	ctx.Wait()
 
+}
+
+func Test_ImmediateExitFromFirstChild(t *testing.T) {
+	fmt.Println("correct closing?")
+
+	root := newNode("0")
+	node1 := newNode("1")
+
+	ctx0 := context.NewContextFor(root)
+	ctx0.NewContextFor(node1)
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		fmt.Println("correct closing!")
+		root.close <- true
+	}()
+
+	ctx0.Wait()
+}
+
+func Test_ImmediateExitFromRoot(t *testing.T) {
+	fmt.Println("correct closing?")
+
+	root := newNode("0")
+	ctx0 := context.NewContextFor(root)
+
+	go func() {
+		fmt.Println("startedGoRoutine")
+		time.Sleep(3 * time.Second)
+		fmt.Println("correct closing!")
+		root.close <- true
+	}()
+
+	ctx0.Wait()
 }

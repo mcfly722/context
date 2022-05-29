@@ -91,6 +91,7 @@ func (context *ctx) start() {
 
 		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
 			ctx.instance.Go(ctx)
+			ctx.waitGroup.Done() // done main loop for root
 		}
 
 		{ // stop all childs contexts
@@ -121,6 +122,7 @@ func (context *ctx) start() {
 
 	}(context)
 
+	context.waitGroup.Add(1) // for root, otherwise it woud be exit without entering
 }
 
 // OnDone ...
