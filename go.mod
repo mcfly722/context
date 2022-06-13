@@ -1,3 +1,3 @@
-module github.com/mcfly722/goPackages/context v1.0.1
+module github.com/mcfly722/goPackages/context
 
 go 1.17
