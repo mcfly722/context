@@ -93,7 +93,7 @@ func Test_ImmediateExitFromFirstChild(t *testing.T) {
 	ctx0.Wait()
 }
 
-func Test_ImmediateExitFromRoot(t *testing.T) {
+func Test_ImmediateExitFrom0(t *testing.T) {
 	fmt.Println("correct closing?")
 
 	root := newNode("0")
@@ -107,4 +107,22 @@ func Test_ImmediateExitFromRoot(t *testing.T) {
 	}()
 
 	ctx0.Wait()
+}
+
+func Test_ImmediateExitFromRoot(t *testing.T) {
+	fmt.Println("correct closing?")
+
+	rootContext := context.NewRootContext()
+	node1 := newNode("1")
+
+	rootContext.NewContextFor(node1)
+
+	go func() {
+		fmt.Println("startedGoRoutine")
+		time.Sleep(3 * time.Second)
+		fmt.Println("correct closing!")
+		rootContext.Terminate()
+	}()
+
+	rootContext.Wait()
 }
