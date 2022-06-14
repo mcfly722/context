@@ -8,15 +8,16 @@ const maxCancelCallsBeforeOnDoneReached int = 3 // you have select {} loop and c
 
 // Context ...
 type Context interface {
-	NewContextFor(instance ContextedInstance) Context
+	NewContextFor(instance ContextedInstance, componentName string, componentType string) Context
 	OnDone() chan bool // buffered channel with size=1. It is essential to do not block on a send onDone to do not stuck if GoRun method has no OnDone check.
 	Wait()
+	Log(eventType int, msg string)
 }
 
 // ContextedInstance ...
 type ContextedInstance interface {
-	Go(current Context) // here we could put our events loop and wait timeouts/events/onDone signal
-	Dispose()           // Dispose fires only when current and all child GoRun's has been finished. It is garantee that there are no any other resources/calls which tries to use current context, this context could be gracefully closed
+	Go(current Context)      // here we could put our events loop and wait timeouts/events/onDone signal
+	Dispose(current Context) // Dispose fires only when current and all child GoRun's has been finished. It is garantee that there are no any other resources/calls which tries to use current context, this context could be gracefully closed
 }
 
 type tree struct {
@@ -24,30 +25,33 @@ type tree struct {
 }
 
 type ctx struct {
-	id          int64
-	parent      *ctx
-	childs      map[int64]*ctx
-	nextChildID int64
-	instance    ContextedInstance
-	waitGroup   sync.WaitGroup
-	currentLoop sync.WaitGroup
-	onDone      chan bool
-	closed      bool
-	tree        *tree
+	id               int64
+	parent           *ctx
+	debugger         Debugger
+	debuggerNodePath []DebugNode // it is not a pointer, it is full array copy
+	childs           map[int64]*ctx
+	nextChildID      int64
+	instance         ContextedInstance
+	waitGroup        sync.WaitGroup
+	currentLoop      sync.WaitGroup
+	onDone           chan bool
+	closed           bool
+	tree             *tree
 }
 
-// NewContextFor generates new context tree
-func NewContextFor(instance ContextedInstance) Context {
+func newContextFor(instance ContextedInstance, debugger Debugger) Context {
 
 	newContext := &ctx{
-		id:          0,
-		parent:      nil,
-		childs:      make(map[int64]*ctx),
-		nextChildID: 0,
-		instance:    instance,
-		onDone:      make(chan bool, maxCancelCallsBeforeOnDoneReached),
-		closed:      false,
-		tree:        &tree{},
+		id:               0,
+		parent:           nil,
+		debugger:         debugger,
+		debuggerNodePath: []DebugNode{DebugNode{ID: 0, ComponentType: "root", ComponentName: "root"}},
+		childs:           make(map[int64]*ctx),
+		nextChildID:      0,
+		instance:         instance,
+		onDone:           make(chan bool, maxCancelCallsBeforeOnDoneReached),
+		closed:           false,
+		tree:             &tree{},
 	}
 
 	newContext.start()
@@ -56,7 +60,7 @@ func NewContextFor(instance ContextedInstance) Context {
 }
 
 // StartNewFor ...
-func (context *ctx) NewContextFor(instance ContextedInstance) Context {
+func (context *ctx) NewContextFor(instance ContextedInstance, componentName string, componentType string) Context {
 
 	// attach to parent new child
 	parent := context
@@ -64,14 +68,16 @@ func (context *ctx) NewContextFor(instance ContextedInstance) Context {
 	context.tree.changesAllowed.Lock()
 
 	newContext := &ctx{
-		id:          parent.nextChildID,
-		parent:      parent,
-		childs:      make(map[int64]*ctx),
-		nextChildID: 0,
-		instance:    instance,
-		onDone:      make(chan bool, maxCancelCallsBeforeOnDoneReached),
-		closed:      parent.closed,
-		tree:        parent.tree,
+		id:               parent.nextChildID,
+		parent:           parent,
+		debugger:         parent.debugger,
+		debuggerNodePath: append(parent.debuggerNodePath, DebugNode{ID: parent.nextChildID, ComponentName: componentName, ComponentType: componentType}),
+		childs:           make(map[int64]*ctx),
+		nextChildID:      0,
+		instance:         instance,
+		onDone:           make(chan bool, maxCancelCallsBeforeOnDoneReached),
+		closed:           parent.closed,
+		tree:             parent.tree,
 	}
 
 	parent.childs[parent.nextChildID] = newContext
@@ -87,14 +93,21 @@ func (context *ctx) NewContextFor(instance ContextedInstance) Context {
 
 }
 
+func (context *ctx) Log(eventType int, msg string) {
+	context.debugger.Log(context.debuggerNodePath, eventType, msg)
+}
+
 func (context *ctx) start() {
 
 	context.currentLoop.Add(1)
 
 	go func(ctx *ctx) {
 
+		ctx.debugger.Log(ctx.debuggerNodePath, 100, "started")
+
 		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
 			ctx.instance.Go(ctx)
+			ctx.debugger.Log(ctx.debuggerNodePath, 101, "finished")
 		}
 
 		{ // stop all childs contexts
@@ -106,7 +119,9 @@ func (context *ctx) start() {
 		}
 
 		{ // all childs and subchilds contexts has been stopped and disposed, we can gracefully dispose current context resources
-			ctx.instance.Dispose()
+			ctx.debugger.Log(ctx.debuggerNodePath, 101, "disposing")
+			ctx.instance.Dispose(ctx)
+			ctx.debugger.Log(ctx.debuggerNodePath, 100, "disposed")
 			ctx.currentLoop.Done()
 		}
 

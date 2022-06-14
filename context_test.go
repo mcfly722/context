@@ -9,49 +9,40 @@ import (
 )
 
 type node struct {
-	name  string
 	close chan bool
 }
 
-func newNode(name string) *node {
-	//fmt.Println(fmt.Sprintf("[%v] created", name))
+type debugger struct{}
 
+func newNode() *node {
 	return &node{
-		name:  name,
 		close: make(chan bool),
 	}
 }
 
 func (node *node) Go(current context.Context) {
 
-	fmt.Println(fmt.Sprintf("[%v] started", node.name))
-
 loop:
 	for {
 		select {
 		case <-node.close:
+			current.Log(102, "close signal")
 			break loop
 		case <-current.OnDone():
 			break loop
 		}
 
 	}
-
-	// fmt.Println(fmt.Sprintf("[%v] finished", node.name))
 }
 
-func (node *node) Dispose() {
-	fmt.Println(fmt.Sprintf("[%v] disposed", node.name))
-}
+func (node *node) Dispose(current context.Context) {}
 
 func (parent *node) buildContextTree(parentCtx context.Context, width int, depth int) context.Context {
 
 	if depth > 0 {
 		for i := 0; i < width; i++ {
-			newChildNode := newNode(fmt.Sprintf("%v->%v", parent.name, i))
-
-			newChildContext := parentCtx.NewContextFor(newChildNode)
-
+			newChildNode := newNode()
+			newChildContext := parentCtx.NewContextFor(newChildNode, fmt.Sprintf("%v", i), "node")
 			newChildNode.buildContextTree(newChildContext, width, depth-1)
 		}
 	}
@@ -61,9 +52,10 @@ func (parent *node) buildContextTree(parentCtx context.Context, width int, depth
 
 func Test_SimpleTree(t *testing.T) {
 
-	node := newNode("0")
+	node := newNode()
 
-	ctx := context.NewContextFor(node)
+	root := context.NewRootContext(context.NewConsoleLogDebugger())
+	ctx := root.NewContextFor(node, "0", "node")
 
 	node.buildContextTree(ctx, 2, 5)
 
@@ -78,32 +70,18 @@ func Test_SimpleTree(t *testing.T) {
 func Test_ImmediateExitFromFirstChild(t *testing.T) {
 	fmt.Println("correct closing?")
 
-	root := newNode("0")
-	node1 := newNode("1")
+	root := context.NewRootContext(context.NewConsoleLogDebugger())
 
-	ctx0 := context.NewContextFor(root)
-	ctx0.NewContextFor(node1)
+	node0 := newNode()
+	node1 := newNode()
+
+	ctx0 := root.NewContextFor(node0, "0", "node")
+	ctx0.NewContextFor(node1, "1", "node")
 
 	go func() {
 		time.Sleep(3 * time.Second)
 		fmt.Println("correct closing!")
-		root.close <- true
-	}()
-
-	ctx0.Wait()
-}
-
-func Test_ImmediateExitFrom0(t *testing.T) {
-	fmt.Println("correct closing?")
-
-	root := newNode("0")
-	ctx0 := context.NewContextFor(root)
-
-	go func() {
-		fmt.Println("startedGoRoutine")
-		time.Sleep(3 * time.Second)
-		fmt.Println("correct closing!")
-		root.close <- true
+		node0.close <- true
 	}()
 
 	ctx0.Wait()
@@ -112,17 +90,32 @@ func Test_ImmediateExitFrom0(t *testing.T) {
 func Test_ImmediateExitFromRoot(t *testing.T) {
 	fmt.Println("correct closing?")
 
-	rootContext := context.NewRootContext()
-	node1 := newNode("1")
+	root := context.NewRootContext(context.NewConsoleLogDebugger())
 
-	rootContext.NewContextFor(node1)
+	node1 := newNode()
+
+	root.NewContextFor(node1, "1", "node")
 
 	go func() {
 		fmt.Println("startedGoRoutine")
 		time.Sleep(3 * time.Second)
 		fmt.Println("correct closing!")
-		rootContext.Terminate()
+		root.Terminate()
 	}()
 
-	rootContext.Wait()
+	root.Wait()
+}
+
+func Test_EmptyDebugger(t *testing.T) {
+	root := context.NewRootContext(context.NewEmptyDebugger())
+
+	go func() {
+		fmt.Println("startedGoRoutine")
+		time.Sleep(3 * time.Second)
+		fmt.Println("correct closing!")
+		root.Terminate()
+	}()
+
+	root.Wait()
+
 }

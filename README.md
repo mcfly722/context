@@ -29,7 +29,7 @@ func (node *node) Go(current context.Context) {
   	}
 }
 
-func (node *node) Dispose() {
+func (node *node) Dispose(current context.Context) {
   # this disposer calls when all child contexts would be closed. You can release your handlers/memory for your node here...
 }
 ```
@@ -46,17 +46,23 @@ node2 := newNode()
 node3 := newNode()
 
 ```
-
-
 #### 3. Create root context
 ```
-newCtx1 := context.NewContextFor(node1)
+rootCtx := context.NewRootContext(context.NewEmptyDebugger())
+```
+You also can use Console debugger like this:
+```
+rootCtx := context.NewRootContext(context.NewConsoleLogDebugger())
 
 ```
+Or implement your own debugger (<b>Debugger</b> interface)
+
 #### 4. Now you can inherit from root context and create childs and subchilds:
 ```
-newCtx2 := newCtx1.NewContextFor(node2)
-newCtx3 := newCtx2.NewContextFor(node3)
+
+newCtx1 := rootCtx.NewContextFor(node1, "1", "node")
+newCtx2 := newCtx1.NewContextFor(node2, "2", "node")
+newCtx3 := newCtx2.NewContextFor(node3, "3", "node")
 ...
 ```
 #### 4. Closing

@@ -2,7 +2,7 @@ package context
 
 // RootContext ...
 type RootContext interface {
-	NewContextFor(instance ContextedInstance) Context
+	NewContextFor(instance ContextedInstance, componentName string, componentType string) Context
 	Terminate()
 	Wait()
 }
@@ -14,11 +14,13 @@ type Root struct {
 }
 
 // NewRootContext ...
-func NewRootContext() RootContext {
+func NewRootContext(debugger Debugger) RootContext {
 	root := &Root{
 		terminate: make(chan bool),
 	}
-	root.ctx = NewContextFor(root)
+
+	root.ctx = newContextFor(root, debugger)
+
 	return root
 }
 
@@ -34,11 +36,11 @@ loop:
 }
 
 // Dispose ...
-func (root *Root) Dispose() {}
+func (root *Root) Dispose(current Context) {}
 
 // NewContextFor ...
-func (root *Root) NewContextFor(instance ContextedInstance) Context {
-	return root.ctx.NewContextFor(instance)
+func (root *Root) NewContextFor(instance ContextedInstance, componentName string, componentType string) Context {
+	return root.ctx.NewContextFor(instance, componentName, componentType)
 }
 
 // Terminate ...
