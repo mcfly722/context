@@ -97,13 +97,15 @@ func Test_ImmediateExitFromRoot(t *testing.T) {
 	root.NewContextFor(node1, "1", "node")
 
 	go func() {
-		fmt.Println("startedGoRoutine")
+		root.Log(0, "startedGoRoutine")
 		time.Sleep(3 * time.Second)
-		fmt.Println("correct closing!")
+		root.Log(0, "correct closing!")
 		root.Terminate()
 	}()
 
 	root.Wait()
+	root.Log(0, "Test_ImmediateExitFromRoot finished")
+
 }
 
 func Test_EmptyDebugger(t *testing.T) {
@@ -117,5 +119,4 @@ func Test_EmptyDebugger(t *testing.T) {
 	}()
 
 	root.Wait()
-
 }

@@ -5,6 +5,7 @@ type RootContext interface {
 	NewContextFor(instance ContextedInstance, componentName string, componentType string) Context
 	Terminate()
 	Wait()
+	Log(eventType int, msg string)
 }
 
 // Root ...
@@ -37,6 +38,11 @@ loop:
 
 // Dispose ...
 func (root *Root) Dispose(current Context) {}
+
+// Log ...
+func (root *Root) Log(eventType int, msg string) {
+	root.ctx.Log(eventType, msg)
+}
 
 // NewContextFor ...
 func (root *Root) NewContextFor(instance ContextedInstance, componentName string, componentType string) Context {
