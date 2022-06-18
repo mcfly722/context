@@ -1,7 +1,6 @@
 package context
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -160,9 +159,6 @@ func (context *ctx) OnDone() chan bool {
 
 // Wait ...
 func (context *ctx) Wait() {
-	fmt.Println("wait")
-	context.waitGroup.Wait() // wait all childs
-	fmt.Println("wait groud done")
+	context.waitGroup.Wait()   // wait all childs
 	context.currentLoop.Wait() // wait for current context disposing
-	fmt.Println("wait current Loop done")
 }
