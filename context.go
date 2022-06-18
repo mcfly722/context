@@ -1,10 +1,11 @@
 package context
 
 import (
+	"fmt"
 	"sync"
 )
 
-const maxCancelCallsBeforeOnDoneReached int = 3 // you have select {} loop and could be several Close() calls from different events. To do not block execution for unblocking send, used channel with this length. This value should be >= 1. (ideal is to have unlimited lenght nonblocking channel, but it needs additional implementation)
+const maxCancelCallsBeforeOnDoneReached int = 32 // you have select {} loop and could be several Close() calls from different events. To do not block execution for unblocking send, used channel with this length. This value should be >= 1. (ideal is to have unlimited lenght nonblocking channel, but it needs additional implementation)
 
 // Context ...
 type Context interface {
@@ -83,11 +84,12 @@ func (context *ctx) NewContextFor(instance ContextedInstance, componentName stri
 	parent.childs[parent.nextChildID] = newContext
 	parent.nextChildID++
 
-	parent.waitGroup.Add(1)
+	if !parent.closed {
+		parent.waitGroup.Add(1)
+		newContext.start()
+	}
 
 	parent.tree.changesAllowed.Unlock()
-
-	newContext.start()
 
 	return newContext
 
@@ -109,13 +111,20 @@ func (context *ctx) start() {
 
 		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
 			ctx.instance.Go(ctx)
+
+			ctx.tree.changesAllowed.Lock()
+			ctx.closed = true
+			ctx.tree.changesAllowed.Unlock()
+
 			ctx.Log(101, "finished")
 		}
 
 		{ // stop all childs contexts
+			ctx.tree.changesAllowed.Lock()
 			for _, child := range ctx.childs {
 				child.onDone <- true
 			}
+			ctx.tree.changesAllowed.Unlock()
 			//  and wait them
 			ctx.waitGroup.Wait()
 		}
@@ -151,6 +160,9 @@ func (context *ctx) OnDone() chan bool {
 
 // Wait ...
 func (context *ctx) Wait() {
-	context.waitGroup.Wait()   // wait all childs
+	fmt.Println("wait")
+	context.waitGroup.Wait() // wait all childs
+	fmt.Println("wait groud done")
 	context.currentLoop.Wait() // wait for current context disposing
+	fmt.Println("wait current Loop done")
 }
