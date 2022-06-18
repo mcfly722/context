@@ -121,7 +121,7 @@ func Test_EmptyDebugger(t *testing.T) {
 	root.Wait()
 }
 
-func Test_AddToRootAfterTermination(t *testing.T) {
+func Test_AddToRootAfterTerminationRace(t *testing.T) {
 
 	root := context.NewRootContext(context.NewConsoleLogDebugger())
 
@@ -134,6 +134,23 @@ func Test_AddToRootAfterTermination(t *testing.T) {
 	node := newNode()
 	ctx := root.NewContextFor(node, "0", "node")
 	node.buildContextTree(ctx, 2, 5)
+
+	go func() {
+		fmt.Println("closing!")
+		root.Terminate()
+	}()
+
+	root.Wait()
+}
+
+func Test_AddToRootAfterTermination(t *testing.T) {
+
+	root := context.NewRootContext(context.NewConsoleLogDebugger())
+	root.Terminate()
+
+	node := newNode()
+	ctx := root.NewContextFor(node, "0", "node")
+	node.buildContextTree(ctx, 4, 6)
 
 	go func() {
 		fmt.Println("closing!")
