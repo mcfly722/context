@@ -94,7 +94,9 @@ func (context *ctx) NewContextFor(instance ContextedInstance, componentName stri
 }
 
 func (context *ctx) Log(eventType int, msg string) {
+	context.tree.changesAllowed.Lock()
 	context.debugger.Log(context.debuggerNodePath, eventType, msg)
+	context.tree.changesAllowed.Unlock()
 }
 
 func (context *ctx) start() {
@@ -103,11 +105,11 @@ func (context *ctx) start() {
 
 	go func(ctx *ctx) {
 
-		ctx.debugger.Log(ctx.debuggerNodePath, 100, "started")
+		ctx.Log(100, "started")
 
 		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
 			ctx.instance.Go(ctx)
-			ctx.debugger.Log(ctx.debuggerNodePath, 101, "finished")
+			ctx.Log(101, "finished")
 		}
 
 		{ // stop all childs contexts
@@ -119,9 +121,9 @@ func (context *ctx) start() {
 		}
 
 		{ // all childs and subchilds contexts has been stopped and disposed, we can gracefully dispose current context resources
-			ctx.debugger.Log(ctx.debuggerNodePath, 101, "disposing")
+			ctx.Log(101, "disposing")
 			ctx.instance.Dispose(ctx)
-			ctx.debugger.Log(ctx.debuggerNodePath, 100, "disposed")
+			ctx.Log(100, "disposed")
 			ctx.currentLoop.Done()
 		}
 

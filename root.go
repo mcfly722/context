@@ -54,7 +54,7 @@ func (root *Root) Terminate() {
 	go func() {
 		root.terminate <- true
 	}()
-	root.ctx.Wait()
+	//root.ctx.Wait()
 }
 
 // Wait ...
