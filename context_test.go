@@ -26,10 +26,13 @@ loop:
 	for {
 		select {
 		case <-node.close:
-			current.Log(102, "close signal")
-			break loop
-		case <-current.OnDone():
-			break loop
+			//fmt.Printf("Cancel()")
+			current.Cancel()
+			break
+		case _, opened := <-current.Opened():
+			if !opened {
+				break loop
+			}
 		}
 
 	}
@@ -62,100 +65,12 @@ func Test_SimpleTree(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	fmt.Println("send cancel")
 	node.close <- true
-	fmt.Println("waiting for closing")
-	ctx.Wait()
-
-}
-
-func Test_ImmediateExitFromFirstChild(t *testing.T) {
-	fmt.Println("correct closing?")
-
-	root := context.NewRootContext(context.NewConsoleLogDebugger())
-
-	node0 := newNode()
-	node1 := newNode()
-
-	ctx0 := root.NewContextFor(node0, "0", "node")
-	ctx0.NewContextFor(node1, "1", "node")
 
 	go func() {
-		time.Sleep(3 * time.Second)
-		fmt.Println("correct closing!")
-		node0.close <- true
-	}()
-
-	ctx0.Wait()
-}
-
-func Test_ImmediateExitFromRoot(t *testing.T) {
-	fmt.Println("correct closing?")
-
-	root := context.NewRootContext(context.NewConsoleLogDebugger())
-
-	node1 := newNode()
-
-	root.NewContextFor(node1, "1", "node")
-
-	go func() {
-		root.Log(0, "startedGoRoutine")
-		time.Sleep(3 * time.Second)
-		root.Log(0, "correct closing!")
-		root.Terminate()
+		time.Sleep(1 * time.Second)
+		root.Cancel()
 	}()
 
 	root.Wait()
-	root.Log(0, "Test_ImmediateExitFromRoot finished")
 
-}
-
-func Test_EmptyDebugger(t *testing.T) {
-	root := context.NewRootContext(context.NewEmptyDebugger())
-
-	go func() {
-		fmt.Println("startedGoRoutine")
-		time.Sleep(3 * time.Second)
-		fmt.Println("correct closing!")
-		root.Terminate()
-	}()
-
-	root.Wait()
-}
-
-func Test_AddToRootAfterTerminationRace(t *testing.T) {
-
-	root := context.NewRootContext(context.NewConsoleLogDebugger())
-
-	go func() {
-		root.Terminate()
-		root.Terminate()
-		root.Terminate()
-	}()
-
-	node := newNode()
-	ctx := root.NewContextFor(node, "0", "node")
-	node.buildContextTree(ctx, 2, 5)
-
-	go func() {
-		fmt.Println("closing!")
-		root.Terminate()
-	}()
-
-	root.Wait()
-}
-
-func Test_AddToRootAfterTermination(t *testing.T) {
-
-	root := context.NewRootContext(context.NewConsoleLogDebugger())
-	root.Terminate()
-
-	node := newNode()
-	ctx := root.NewContextFor(node, "0", "node")
-	node.buildContextTree(ctx, 4, 6)
-
-	go func() {
-		fmt.Println("closing!")
-		root.Terminate()
-	}()
-
-	root.Wait()
 }

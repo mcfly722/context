@@ -2,27 +2,15 @@ package context
 
 // RootContext ...
 type RootContext interface {
-	NewContextFor(instance ContextedInstance, componentName string, componentType string) Context
-	Terminate()
-	Wait()
-	Log(eventType int, msg string)
+	NewContextFor(instance ContextedInstance, componentName string, componentType string) Context // create new child context
+	Cancel()                                                                                      // cancel root context with all childs
+	Wait()                                                                                        // waits till root context would be closed
+	Log(eventType int, msg string)                                                                // log context event
 }
 
 // Root ...
 type Root struct {
-	ctx       Context
-	terminate chan bool
-}
-
-// NewRootContext ...
-func NewRootContext(debugger Debugger) RootContext {
-	root := &Root{
-		terminate: make(chan bool),
-	}
-
-	root.ctx = newContextFor(root, debugger)
-
-	return root
+	ctx Context
 }
 
 // Go ...
@@ -30,14 +18,32 @@ func (root *Root) Go(current Context) {
 loop:
 	for {
 		select {
-		case <-root.terminate:
-			break loop
+		case _, opened := <-current.Opened():
+			if !opened {
+				break loop
+			}
 		}
 	}
 }
 
-// Dispose ...
-func (root *Root) Dispose(current Context) {}
+// NewRootContext ...
+func NewRootContext(debugger Debugger) RootContext {
+	root := &Root{}
+
+	root.ctx = newContextFor(root, debugger)
+
+	return root
+}
+
+// Cancel ...
+func (root *Root) Cancel() {
+	root.ctx.Cancel()
+}
+
+// Wait ...
+func (root *Root) Wait() {
+	root.ctx.wait()
+}
 
 // Log ...
 func (root *Root) Log(eventType int, msg string) {
@@ -47,17 +53,4 @@ func (root *Root) Log(eventType int, msg string) {
 // NewContextFor ...
 func (root *Root) NewContextFor(instance ContextedInstance, componentName string, componentType string) Context {
 	return root.ctx.NewContextFor(instance, componentName, componentType)
-}
-
-// Terminate ...
-func (root *Root) Terminate() {
-	go func() {
-		root.terminate <- true
-	}()
-	//root.ctx.Wait()
-}
-
-// Wait ...
-func (root *Root) Wait() {
-	root.ctx.Wait()
 }
