@@ -28,7 +28,7 @@ func (node *node) Go(current context.Context) {
   		    if !opened {
   		      break loop
   		    }
-          break
+  		    break
   		}
   	}
 
