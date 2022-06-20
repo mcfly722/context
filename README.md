@@ -23,7 +23,7 @@ func (node *node) Go(current context.Context) {
   		select {
   		case <-node.close:
         context.Cancel()
-  			break                // !!!!! do not exit from loop here! panic will occur if some childs are left unclosed
+        break                // !!!!! do not exit from loop here! panic will occur if some childs are left unclosed
   		case _, opened <-current.Opened():
         if !opened {
           break loop
