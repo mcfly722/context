@@ -105,17 +105,17 @@ func (context *ctx) recursiveClosing() {
 }
 
 func (context *ctx) cancel() {
-	context.Log(101, "recursiveSetChildsCreatingAllowed ...")
+	//context.Log(101, "recursiveSetChildsCreatingAllowed ...")
 	context.tree.changesAllowed.Lock()
 	context.recursiveSetChildsCreatingAllowed(false)
 	context.tree.changesAllowed.Unlock()
-	context.Log(101, "recursiveSetChildsCreatingAllowed done")
+	//context.Log(101, "recursiveSetChildsCreatingAllowed done")
 
-	context.Log(101, "recursiveClosing ...")
+	//context.Log(101, "recursiveClosing ...")
 	context.tree.changesAllowed.Lock()
 	context.recursiveClosing()
 	context.tree.changesAllowed.Unlock()
-	context.Log(101, "recursiveClosing done")
+	//context.Log(101, "recursiveClosing done")
 }
 
 func (context *ctx) Cancel() {
@@ -165,10 +165,9 @@ func (context *ctx) NewContextFor(instance ContextedInstance, componentName stri
 }
 
 func (context *ctx) wait() {
-	context.Log(101, "wait")
+	context.Log(101, "waiting till finished")
 	context.childsWaitGroup.Wait()
 	context.loopWaitGroup.Wait()
-	context.Log(101, "waiting finished")
 }
 
 func (context *ctx) Log(eventType int, msg string) {

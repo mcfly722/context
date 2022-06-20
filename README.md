@@ -73,9 +73,8 @@ Do not close your events loop using your own chan events. For it, use <b>current
 
 
 #### Recomendations and limitations
- 1. you have always use <b>current.Close()</b> call to exit from current goroutine, do not exit from your loop after external signals
- 2. use <b>NewContextFor()</b> only from started context goroutine. Do not call it from constructors or parents.
+ 1. you have always use <b>current.Close()</b> call to exit from current goroutine, do not exit from your loop on external signals
+ 2. use <b>NewContextFor()</b> only from started goroutine. Do not call it from constructors or parents.
  3. there are no any <b>Schedulers</b>, <b>Values</b>, or any <b>Reflection</b> methods like in original library. My purpose here is to create this library as lightweight and as possible. Testing tree parallelism for race conditions are really really hard thing, I totally rewrites and refactored this small piece of code at least <b>12</b> times, until it becomes as simple and predictable as possible.
-
-<br><br>
+<br>
 If you have any suggestions or recommendations, please, use issue tracker, I would be glad to help.
