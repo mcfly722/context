@@ -33,6 +33,7 @@ loop:
 			if !opened {
 				break loop
 			}
+			break
 		}
 
 	}
