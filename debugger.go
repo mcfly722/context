@@ -15,14 +15,14 @@ type DebugNode struct {
 
 // Debugger ...
 type Debugger interface {
-	Log(nodePath []DebugNode, eventType int, msg string)
+	Log(nodePath []DebugNode, vars ...interface{})
 }
 
 // EmptyDebugger ...
 type EmptyDebugger struct{}
 
 // Log ...
-func (emptyDebugger *EmptyDebugger) Log(nodePath []DebugNode, eventType int, msg string) {}
+func (emptyDebugger *EmptyDebugger) Log(nodePath []DebugNode, vars ...interface{}) {}
 
 // NewEmptyDebugger ...
 func NewEmptyDebugger() Debugger {
@@ -38,7 +38,7 @@ func NewConsoleLogDebugger() Debugger {
 }
 
 // Log ...
-func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, eventType int, msg string) {
+func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, arguments ...interface{}) {
 	pathStrings := []string{}
 
 	for _, node := range nodePath {
@@ -47,5 +47,19 @@ func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, eventTyp
 
 	path := strings.Join(pathStrings, "->")
 
-	fmt.Println(fmt.Sprintf("%v %4v [%v]: %v", time.Now().Format(time.RFC3339), eventType, path, msg))
+	values := []string{}
+	values = append(values, fmt.Sprintf("%v", time.Now().Format(time.RFC3339)))
+	values = append(values, path)
+
+	valuesStr := strings.Join(values, ",")
+
+	vars := []string{}
+	for _, value := range arguments {
+		for _, value2 := range value.([]interface{}) {
+			vars = append(vars, fmt.Sprintf("%v", value2))
+		}
+	}
+	varsStr := strings.Join(vars, ",")
+
+	fmt.Println(fmt.Sprintf("%v    %v", valuesStr, varsStr))
 }

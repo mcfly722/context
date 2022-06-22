@@ -17,7 +17,7 @@ type Context interface {
 	NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) // create new child context
 	Opened() chan struct{}                                                                                 // channel what closes when all childs are closed and you can close current context
 	Cancel()                                                                                               // sends signal to current and all child contexts to close hierarchy gracefully (childs first, parent second)
-	Log(eventType int, msg string)                                                                         // log context even
+	Log(vars ...interface{})                                                                               // log context even
 	wait()
 }
 
@@ -175,9 +175,9 @@ func (context *ctx) wait() {
 	context.loopWaitGroup.Wait()
 }
 
-func (context *ctx) Log(eventType int, msg string) {
+func (context *ctx) Log(vars ...interface{}) {
 	context.debuggerMutex.Lock()
-	context.tree.debugger.Log(context.debuggerNodePath, eventType, msg)
+	context.tree.debugger.Log(context.debuggerNodePath, vars)
 	context.debuggerMutex.Unlock()
 }
 

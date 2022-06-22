@@ -5,7 +5,7 @@ type RootContext interface {
 	NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) // create new child context
 	Cancel()                                                                                               // cancel root context with all childs
 	Wait()                                                                                                 // waits till root context would be closed
-	Log(eventType int, msg string)                                                                         // log context event
+	Log(vars ...interface{})                                                                               // log context event
 }
 
 // Root ...
@@ -46,8 +46,8 @@ func (root *Root) Wait() {
 }
 
 // Log ...
-func (root *Root) Log(eventType int, msg string) {
-	root.ctx.Log(eventType, msg)
+func (root *Root) Log(vars ...interface{}) {
+	root.ctx.Log(vars)
 }
 
 // NewContextFor ...
