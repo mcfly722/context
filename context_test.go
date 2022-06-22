@@ -46,7 +46,7 @@ func (parent *node) buildContextTree(parentCtx context.Context, width int, depth
 	if depth > 0 {
 		for i := 0; i < width; i++ {
 			newChildNode := newNode()
-			newChildContext := parentCtx.NewContextFor(newChildNode, fmt.Sprintf("%v", i), "node")
+			newChildContext, _ := parentCtx.NewContextFor(newChildNode, fmt.Sprintf("%v", i), "node")
 			newChildNode.buildContextTree(newChildContext, width, depth-1)
 		}
 	}

@@ -30,7 +30,7 @@ loop:
 func NewRootContext(debugger Debugger) RootContext {
 	root := &Root{}
 
-	root.ctx = newContextFor(root, debugger)
+	root.ctx, _ = newContextFor(root, debugger)
 
 	return root
 }
@@ -52,5 +52,6 @@ func (root *Root) Log(eventType int, msg string) {
 
 // NewContextFor ...
 func (root *Root) NewContextFor(instance ContextedInstance, componentName string, componentType string) Context {
-	return root.ctx.NewContextFor(instance, componentName, componentType)
+	child, _ := root.ctx.NewContextFor(instance, componentName, componentType)
+	return child
 }

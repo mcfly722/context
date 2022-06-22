@@ -5,12 +5,19 @@ import (
 	"sync"
 )
 
+// ParentContextAlreadyInClosingStateError ...
+type ParentContextAlreadyInClosingStateError struct{}
+
+func (err *ParentContextAlreadyInClosingStateError) Error() string {
+	return fmt.Sprintf("Context already in closing state, you cannot bind childs for it")
+}
+
 // Context ...
 type Context interface {
-	NewContextFor(instance ContextedInstance, componentName string, componentType string) Context // create new child context
-	Opened() chan struct{}                                                                        // channel what closes when all childs are closed and you can close current context
-	Cancel()                                                                                      // sends signal to current and all child contexts to close hierarchy gracefully (childs first, parent second)
-	Log(eventType int, msg string)                                                                // log context even
+	NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) // create new child context
+	Opened() chan struct{}                                                                                 // channel what closes when all childs are closed and you can close current context
+	Cancel()                                                                                               // sends signal to current and all child contexts to close hierarchy gracefully (childs first, parent second)
+	Log(eventType int, msg string)                                                                         // log context even
 	wait()
 }
 
@@ -43,7 +50,7 @@ type ctx struct {
 	debuggerMutex    sync.Mutex
 }
 
-func newContextFor(instance ContextedInstance, debugger Debugger) Context {
+func newContextFor(instance ContextedInstance, debugger Debugger) (Context, error) {
 
 	newContext := &ctx{
 		id:                    0,
@@ -60,7 +67,7 @@ func newContextFor(instance ContextedInstance, debugger Debugger) Context {
 
 	newContext.start()
 
-	return newContext
+	return newContext, nil
 }
 
 func (context *ctx) Opened() chan struct{} {
@@ -125,12 +132,13 @@ func (context *ctx) Cancel() {
 }
 
 // StartNewFor ...
-func (context *ctx) NewContextFor(instance ContextedInstance, componentName string, componentType string) Context {
+func (context *ctx) NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) {
 
 	// attach to parent new child
 	parent := context
 
 	context.tree.changesAllowed.Lock()
+	defer parent.tree.changesAllowed.Unlock()
 
 	parent.debuggerMutex.Lock()
 	debuggerNodePath := make([]DebugNode, len(parent.debuggerNodePath))
@@ -156,12 +164,9 @@ func (context *ctx) NewContextFor(instance ContextedInstance, componentName stri
 		parent.nextChildID++
 		parent.childsWaitGroup.Add(1)
 		newContext.start()
+		return newContext, nil
 	}
-
-	parent.tree.changesAllowed.Unlock()
-
-	return newContext
-
+	return nil, &ParentContextAlreadyInClosingStateError{}
 }
 
 func (context *ctx) wait() {

@@ -64,8 +64,10 @@ Or implement your own debugger (<b>Debugger</b> interface)
 ```
 
 newCtx1 := rootCtx.NewContextFor(node1, "1", "node")
-newCtx2 := newCtx1.NewContextFor(node2, "2", "node")
-newCtx3 := newCtx2.NewContextFor(node3, "3", "node")
+newCtx2, err := newCtx1.NewContextFor(node2, "2", "node")
+if err!=nil {return err}
+newCtx3, err := newCtx2.NewContextFor(node3, "3", "node")
+if err!=nil {return err}
 ...
 ```
 #### 4. Closing
@@ -75,7 +77,7 @@ Do not close your events loop using your own chan events. For it, use <b>current
 #### Recomendations and limitations
  1. you have always use <b>current.Close()</b> call to exit from current goroutine, do not exit from your loop on external signals
  2. use <b>NewContextFor()</b> only from started goroutine. Do not call it from constructors or parents.
- 3. I want wait till child context will closed. Where is <b>context.Wait()</b>?<br>
+ 3. I want wait till child context will be closed. Where is <b>context.Wait()</b>?<br>
  <b>context.Wait()</b> is a race condition potential mistake. You send close to child and wait in parent, but childs at this moment do not know anything about closing. It continues to send data to parent through channels. Parent blocked, it waits with <b>contenxt.Wait()</b>. Child also blocked on channel send. It is full dead block.
  4. Why <b>rootContext.Wait()</b> exists?<br>
  <b>rootContext</b> has its own empty goroutine loop without any send/receive, so, deadblock from scenario 3 is not possible.
