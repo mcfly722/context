@@ -59,7 +59,10 @@ func Test_SimpleTree(t *testing.T) {
 	node := newNode()
 
 	root := context.NewRootContext(context.NewConsoleLogDebugger())
-	ctx := root.NewContextFor(node, "0", "node")
+	ctx, err := root.NewContextFor(node, "0", "node")
+	if err != nil {
+		panic(err)
+	}
 
 	node.buildContextTree(ctx, 2, 5)
 

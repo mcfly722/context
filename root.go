@@ -2,10 +2,10 @@ package context
 
 // RootContext ...
 type RootContext interface {
-	NewContextFor(instance ContextedInstance, componentName string, componentType string) Context // create new child context
-	Cancel()                                                                                      // cancel root context with all childs
-	Wait()                                                                                        // waits till root context would be closed
-	Log(eventType int, msg string)                                                                // log context event
+	NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) // create new child context
+	Cancel()                                                                                               // cancel root context with all childs
+	Wait()                                                                                                 // waits till root context would be closed
+	Log(eventType int, msg string)                                                                         // log context event
 }
 
 // Root ...
@@ -51,7 +51,6 @@ func (root *Root) Log(eventType int, msg string) {
 }
 
 // NewContextFor ...
-func (root *Root) NewContextFor(instance ContextedInstance, componentName string, componentType string) Context {
-	child, _ := root.ctx.NewContextFor(instance, componentName, componentType)
-	return child
+func (root *Root) NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) {
+	return root.ctx.NewContextFor(instance, componentName, componentType)
 }
