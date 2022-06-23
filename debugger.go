@@ -15,14 +15,14 @@ type DebugNode struct {
 
 // Debugger ...
 type Debugger interface {
-	Log(nodePath []DebugNode, vars ...interface{})
+	Log(nodePath []DebugNode, objects []interface{})
 }
 
 // EmptyDebugger ...
 type EmptyDebugger struct{}
 
 // Log ...
-func (emptyDebugger *EmptyDebugger) Log(nodePath []DebugNode, vars ...interface{}) {}
+func (emptyDebugger *EmptyDebugger) Log(nodePath []DebugNode, objects []interface{}) {}
 
 // NewEmptyDebugger ...
 func NewEmptyDebugger() Debugger {
@@ -38,7 +38,7 @@ func NewConsoleLogDebugger() Debugger {
 }
 
 // Log ...
-func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, arguments ...interface{}) {
+func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, objects []interface{}) {
 	pathStrings := []string{}
 
 	for _, node := range nodePath {
@@ -54,10 +54,14 @@ func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, argument
 	valuesStr := strings.Join(values, ",")
 
 	vars := []string{}
-	for _, argument := range arguments {
-		for _, parameter := range argument.([]interface{}) {
-			vars = append(vars, fmt.Sprintf("%v", parameter))
-		}
+	for _, object := range objects {
+		vars = append(vars, fmt.Sprintf("%v", object))
+
+		/*
+			for _, parameter := range object.([]interface{}) {
+				vars = append(vars, fmt.Sprintf("%v", parameter))
+			}
+		*/
 	}
 	varsStr := strings.Join(vars, ",")
 
