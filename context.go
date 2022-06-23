@@ -18,6 +18,7 @@ type Context interface {
 	Opened() chan struct{}                                                                                 // channel what closes when all childs are closed and you can close current context
 	Cancel()                                                                                               // sends signal to current and all child contexts to close hierarchy gracefully (childs first, parent second)
 	Log(arguments ...interface{})                                                                          // log context even
+	log(objects []interface{})
 	wait()
 }
 
@@ -183,6 +184,10 @@ func (context *ctx) Log(arguments ...interface{}) {
 		objects = append(objects, argument)
 	}
 
+	context.log(objects)
+}
+
+func (context *ctx) log(objects []interface{}) {
 	context.debuggerMutex.Lock()
 	context.tree.debugger.Log(context.debuggerNodePath, objects)
 	context.debuggerMutex.Unlock()

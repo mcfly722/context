@@ -46,8 +46,14 @@ func (root *Root) Wait() {
 }
 
 // Log ...
-func (root *Root) Log(vars ...interface{}) {
-	root.ctx.Log(vars)
+func (root *Root) Log(arguments ...interface{}) {
+	objects := make([]interface{}, 0)
+
+	for _, argument := range arguments {
+		objects = append(objects, argument)
+	}
+
+	root.ctx.log(objects)
 }
 
 // NewContextFor ...
