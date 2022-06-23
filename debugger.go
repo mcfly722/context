@@ -54,9 +54,9 @@ func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, argument
 	valuesStr := strings.Join(values, ",")
 
 	vars := []string{}
-	for _, value := range arguments {
-		for _, value2 := range value.([]interface{}) {
-			vars = append(vars, fmt.Sprintf("%v", value2))
+	for _, argument := range arguments {
+		for _, parameter := range argument.([]interface{}) {
+			vars = append(vars, fmt.Sprintf("%v", parameter))
 		}
 	}
 	varsStr := strings.Join(vars, ",")
