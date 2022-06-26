@@ -29,6 +29,7 @@ type ContextedInstance interface {
 
 type tree struct {
 	changesAllowed sync.Mutex
+	closingAllowed sync.Mutex
 	debugger       Debugger
 }
 
@@ -124,17 +125,23 @@ func (context *ctx) recursiveClosing() {
 }
 
 func (context *ctx) cancel() {
-	context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed ...")
-	context.tree.changesAllowed.Lock()
-	context.recursiveSetChildsCreatingAllowed(false)
-	context.tree.changesAllowed.Unlock()
-	context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed done")
+	context.tree.closingAllowed.Lock()
+	defer context.tree.closingAllowed.Unlock()
 
-	context.Log(102, "cancel", "recursiveClosing ...")
-	context.tree.changesAllowed.Lock()
-	context.recursiveClosing()
-	context.tree.changesAllowed.Unlock()
-	context.Log(102, "cancel", "recursiveClosing done")
+	{
+		context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed ...")
+		context.tree.changesAllowed.Lock()
+		context.recursiveSetChildsCreatingAllowed(false)
+		context.tree.changesAllowed.Unlock()
+		context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed done")
+	}
+
+	{
+		context.Log(102, "cancel", "recursiveClosing ...")
+		context.recursiveClosing()
+		context.Log(102, "cancel", "recursiveClosing done")
+	}
+
 }
 
 func (context *ctx) Cancel() {
