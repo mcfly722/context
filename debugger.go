@@ -32,12 +32,14 @@ func NewEmptyDebugger() Debugger {
 // ConsoleLogDebugger ...
 type ConsoleLogDebugger struct {
 	maximumLogLevel int
+	showIDs         bool
 }
 
 // NewConsoleLogDebugger ...
-func NewConsoleLogDebugger(maximumLogLevel int) Debugger {
+func NewConsoleLogDebugger(maximumLogLevel int, showIDs bool) Debugger {
 	return &ConsoleLogDebugger{
 		maximumLogLevel: maximumLogLevel,
+		showIDs:         showIDs,
 	}
 }
 
@@ -46,7 +48,11 @@ func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, objects 
 	pathStrings := []string{}
 
 	for _, node := range nodePath {
-		pathStrings = append(pathStrings, fmt.Sprintf("%v[%v]", node.ComponentName, node.ID))
+		name := node.ComponentName
+		if consoleLogDebugger.showIDs {
+			name = fmt.Sprintf("%v[%v]", name, node.ID)
+		}
+		pathStrings = append(pathStrings, name)
 	}
 
 	path := strings.Join(pathStrings, "->")
