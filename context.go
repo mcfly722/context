@@ -171,9 +171,11 @@ func (context *ctx) NewContextFor(instance ContextedInstance, componentName stri
 }
 
 func (context *ctx) wait() {
-	context.Log(101, "waiting till finished")
+	context.Log(101, "waiting till childs finished")
 	context.childsWaitGroup.Wait()
+	context.Log(101, "waiting till loop finished")
 	context.loopWaitGroup.Wait()
+	context.Log(101, "waiting done")
 }
 
 func (context *ctx) Log(arguments ...interface{}) {
