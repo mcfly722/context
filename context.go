@@ -76,10 +76,12 @@ func (context *ctx) Opened() chan struct{} {
 }
 
 func (context *ctx) recursiveSetChildsCreatingAllowed(value bool) {
+	context.Log(103, "recursiveSetChildsCreatingAllowed", "...")
 	for _, child := range context.childs {
 		child.recursiveSetChildsCreatingAllowed(value)
 	}
 	context.childsCreatingAllowed = value
+	context.Log(103, "recursiveSetChildsCreatingAllowed", "done")
 }
 
 func (context *ctx) close() {
@@ -93,7 +95,7 @@ func (context *ctx) close() {
 }
 
 func (context *ctx) recursiveClosing() {
-	//context.Log(101, "recursiveClosingChilds ...")
+	context.Log(103, "recursiveClosing", "...")
 	childs := make(map[int64]*ctx)
 
 	for id, child := range context.childs {
@@ -106,24 +108,24 @@ func (context *ctx) recursiveClosing() {
 	}
 
 	context.childsWaitGroup.Wait()
-	//context.Log(101, "recursiveClosingChilds done")
+	context.Log(103, "recursiveClosing", "done")
 
 	context.close()
 	context.loopWaitGroup.Wait()
 }
 
 func (context *ctx) cancel() {
-	//context.Log(101, "recursiveSetChildsCreatingAllowed ...")
+	context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed ...")
 	context.tree.changesAllowed.Lock()
 	context.recursiveSetChildsCreatingAllowed(false)
 	context.tree.changesAllowed.Unlock()
-	//context.Log(101, "recursiveSetChildsCreatingAllowed done")
+	context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed done")
 
-	//context.Log(101, "recursiveClosing ...")
+	context.Log(102, "cancel", "recursiveClosing ...")
 	context.tree.changesAllowed.Lock()
 	context.recursiveClosing()
 	context.tree.changesAllowed.Unlock()
-	//context.Log(101, "recursiveClosing done")
+	context.Log(102, "cancel", "recursiveClosing done")
 }
 
 func (context *ctx) Cancel() {
@@ -205,7 +207,7 @@ func (context *ctx) start() {
 
 		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
 			ctx.instance.Go(ctx)
-			ctx.Log(101, "finished")
+			ctx.Log(100, "finished")
 		}
 
 		{ // panic on not closed childs

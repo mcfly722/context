@@ -30,11 +30,15 @@ func NewEmptyDebugger() Debugger {
 }
 
 // ConsoleLogDebugger ...
-type ConsoleLogDebugger struct{}
+type ConsoleLogDebugger struct {
+	maximumLogLevel int
+}
 
 // NewConsoleLogDebugger ...
-func NewConsoleLogDebugger() Debugger {
-	return &ConsoleLogDebugger{}
+func NewConsoleLogDebugger(maximumLogLevel int) Debugger {
+	return &ConsoleLogDebugger{
+		maximumLogLevel: maximumLogLevel,
+	}
 }
 
 // Log ...
@@ -53,17 +57,21 @@ func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, objects 
 
 	valuesStr := strings.Join(values, ",")
 
-	vars := []string{}
-	for _, object := range objects {
-		vars = append(vars, fmt.Sprintf("%v", object))
-
-		/*
-			for _, parameter := range object.([]interface{}) {
-				vars = append(vars, fmt.Sprintf("%v", parameter))
+	skipMessages := false
+	if len(objects) > 0 {
+		if debugLevel, ok := objects[0].(int); ok {
+			if consoleLogDebugger.maximumLogLevel < debugLevel {
+				skipMessages = true
 			}
-		*/
+		}
 	}
-	varsStr := strings.Join(vars, ",")
 
-	fmt.Println(fmt.Sprintf("%v    %v", valuesStr, varsStr))
+	if !skipMessages {
+		vars := []string{}
+		for _, object := range objects {
+			vars = append(vars, fmt.Sprintf("%v", object))
+		}
+		varsStr := strings.Join(vars, ",")
+		fmt.Println(fmt.Sprintf("%v    %v", valuesStr, varsStr))
+	}
 }
