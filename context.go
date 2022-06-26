@@ -85,13 +85,16 @@ func (context *ctx) recursiveSetChildsCreatingAllowed(value bool) {
 }
 
 func (context *ctx) close() {
+	context.Log(105, "close", "...")
 	context.closedMutex.Lock()
 	defer context.closedMutex.Unlock()
 
 	if !context.closed {
+		context.Log(105, "close", "channel closed")
 		close(context.opened)
 		context.closed = true
 	}
+	context.Log(105, "close", "done")
 }
 
 func (context *ctx) recursiveClosing() {
@@ -107,11 +110,17 @@ func (context *ctx) recursiveClosing() {
 		delete(context.childs, id)
 	}
 
+	context.Log(104, "childsWaitGroup", "...")
 	context.childsWaitGroup.Wait()
-	context.Log(103, "recursiveClosing", "done")
+	context.Log(104, "childsWaitGroup", "done")
 
 	context.close()
+
+	context.Log(104, "loopWaitGroup", "...")
 	context.loopWaitGroup.Wait()
+	context.Log(104, "loopWaitGroup", "done")
+
+	context.Log(103, "recursiveClosing", "done")
 }
 
 func (context *ctx) cancel() {
