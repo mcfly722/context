@@ -46,7 +46,7 @@ func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, objects 
 	pathStrings := []string{}
 
 	for _, node := range nodePath {
-		pathStrings = append(pathStrings, node.ComponentName)
+		pathStrings = append(pathStrings, fmt.Sprintf("%v[%v]", node.ComponentName, node.ID))
 	}
 
 	path := strings.Join(pathStrings, "->")
