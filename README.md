@@ -82,6 +82,6 @@ Do not close your events loop using your own chan events. For it, use <b>current
  4. Why <b>rootContext.Wait()</b> exists?<br>
  <b>rootContext</b> has its own empty goroutine loop without any send/receive, so, deadblock from scenario 3 is not possible.
  5. Why used opened channel flag, but not <b><-OnDone()</b> receive?<br>
- It is more safe. When you tries send to channel it cloud block original goroutine till child do not receive it. With closing channel this dead block scenario is excluded.
+ It is more safe. When you tries send to channel it could block original goroutine till child do not receive it. With closing channel this dead block scenario is excluded.
  <br><br>
 If you have any suggestions or recommendations, please, use issue tracker, I would be glad to help.

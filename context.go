@@ -15,6 +15,7 @@ func (err *ParentContextAlreadyInClosingStateError) Error() string {
 // Context ...
 type Context interface {
 	NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) // create new child context
+	SetOnBeforeClosing(handler func(Context))                                                              // this handler calls for current context before closing all child and subchild contexts
 	Opened() chan struct{}                                                                                 // channel what closes when all childs are closed and you can close current context
 	Cancel()                                                                                               // sends signal to current and all child contexts to close hierarchy gracefully (childs first, parent second)
 	Log(arguments ...interface{})                                                                          // log context even
@@ -48,6 +49,9 @@ type ctx struct {
 	closed      bool
 	closedMutex sync.Mutex
 
+	onBeforeClosing      func(current Context)
+	onBeforeClosingMutex sync.Mutex
+
 	debuggerNodePath []DebugNode // it is not a pointer, it is full array copy
 	debuggerMutex    sync.Mutex
 }
@@ -64,6 +68,7 @@ func newContextFor(instance ContextedInstance, debugger Debugger) (Context, erro
 		childsCreatingAllowed: true,
 		opened:                make(chan struct{}),
 		tree:                  &tree{debugger: debugger},
+		onBeforeClosing:       func(current Context) {},
 		closed:                false,
 	}
 
@@ -100,6 +105,8 @@ func (context *ctx) close() {
 
 func (context *ctx) recursiveClosing() {
 	context.Log(103, "recursiveClosing", "...")
+	context.callOnCloseHandler()
+
 	childs := make(map[int64]*ctx)
 
 	for id, child := range context.childs {
@@ -175,6 +182,7 @@ func (context *ctx) NewContextFor(instance ContextedInstance, componentName stri
 		childsCreatingAllowed: parent.childsCreatingAllowed,
 		opened:                make(chan struct{}),
 		tree:                  parent.tree,
+		onBeforeClosing:       func(current Context) {},
 		closed:                false,
 	}
 
@@ -245,4 +253,18 @@ func (context *ctx) start() {
 		}
 
 	}(context)
+}
+
+func (context *ctx) SetOnBeforeClosing(handler func(current Context)) {
+	context.onBeforeClosingMutex.Lock()
+	defer context.onBeforeClosingMutex.Unlock()
+	context.onBeforeClosing = handler
+}
+
+func (context *ctx) callOnCloseHandler() {
+	context.onBeforeClosingMutex.Lock()
+	defer context.onBeforeClosingMutex.Unlock()
+	if context.onBeforeClosing != nil {
+		context.onBeforeClosing(context)
+	}
 }
