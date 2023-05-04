@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mcfly722/goPackages/context"
+	"github.com/mcfly722/context"
 )
 
 type node struct {
 	close chan bool
 }
 
-type debugger struct{}
+//type debugger struct{}
 
 func newNode() *node {
 	return &node{
@@ -28,12 +28,10 @@ loop:
 		case <-node.close:
 			//fmt.Printf("Cancel()")
 			current.Cancel()
-			break
 		case _, opened := <-current.Opened():
 			if !opened {
 				break loop
 			}
-			break
 		}
 
 	}

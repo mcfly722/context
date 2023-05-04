@@ -9,7 +9,7 @@ import (
 type ParentContextAlreadyInClosingStateError struct{}
 
 func (err *ParentContextAlreadyInClosingStateError) Error() string {
-	return fmt.Sprintf("Context already in closing state, you cannot bind childs for it")
+	return "Context already in closing state, you cannot bind childs for it"
 }
 
 // Context ...
@@ -61,7 +61,7 @@ func newContextFor(instance ContextedInstance, debugger Debugger) (Context, erro
 	newContext := &ctx{
 		id:                    0,
 		parent:                nil,
-		debuggerNodePath:      []DebugNode{DebugNode{ID: 0, ComponentType: "root", ComponentName: "root"}},
+		debuggerNodePath:      []DebugNode{{ID: 0, ComponentType: "root", ComponentName: "root"}},
 		childs:                make(map[int64]*ctx),
 		nextChildID:           0,
 		instance:              instance,
@@ -208,9 +208,7 @@ func (context *ctx) Log(arguments ...interface{}) {
 
 	objects := make([]interface{}, 0)
 
-	for _, argument := range arguments {
-		objects = append(objects, argument)
-	}
+	objects = append(objects, arguments...)
 
 	context.log(objects)
 }

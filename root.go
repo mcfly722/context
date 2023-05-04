@@ -15,15 +15,18 @@ type Root struct {
 
 // Go ...
 func (root *Root) Go(current Context) {
-loop:
-	for {
-		select {
-		case _, opened := <-current.Opened():
-			if !opened {
-				break loop
+	<-current.Opened()
+	/*
+		loop:
+			for {
+				select {
+				case _, opened := <-current.Opened():
+					if !opened {
+						break loop
+					}
+				}
 			}
-		}
-	}
+	*/
 }
 
 // NewRootContext ...
@@ -49,9 +52,7 @@ func (root *Root) Wait() {
 func (root *Root) Log(arguments ...interface{}) {
 	objects := make([]interface{}, 0)
 
-	for _, argument := range arguments {
-		objects = append(objects, argument)
-	}
+	objects = append(objects, arguments...)
 
 	root.ctx.log(objects)
 }

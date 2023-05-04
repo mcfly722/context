@@ -79,6 +79,7 @@ func (consoleLogDebugger *ConsoleLogDebugger) Log(nodePath []DebugNode, objects 
 			vars = append(vars, fmt.Sprintf("%v", object))
 		}
 		varsStr := strings.Join(vars, ",")
-		fmt.Println(fmt.Sprintf("%v\t%v", valuesStr, varsStr))
+		msg := fmt.Sprintf("%v\t%v\n", valuesStr, varsStr)
+		fmt.Print(msg)
 	}
 }
