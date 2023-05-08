@@ -103,10 +103,6 @@ func (context *ctx) close() {
 	context.Log(105, "close", "done")
 }
 
-func NotTestedMethod() {
-	fmt.Println("qwe")
-}
-
 func (context *ctx) recursiveClosing() {
 	context.Log(103, "recursiveClosing", "...")
 	context.callOnCloseHandler()
