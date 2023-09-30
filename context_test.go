@@ -41,14 +41,14 @@ loop:
 }
 
 func (parent *node1) simpleTree(context context.ContextNode, width int, height int) {
-	if height > 0 {
+	if height > 1 {
 
 		for i := 0; i < width; i++ {
 
 			newNode := newNode1(fmt.Sprintf("%v->%v", parent.path, i), i)
 			newContext, err := context.NewContextFor(newNode)
 			if err == nil {
-				fmt.Printf("%v initiated\n", newNode.name())
+				fmt.Printf("%v started\n", newNode.name())
 				newNode.simpleTree(newContext, width, height-1)
 			}
 
@@ -58,7 +58,7 @@ func (parent *node1) simpleTree(context context.ContextNode, width int, height i
 
 }
 
-func Test_SimpleTree(t *testing.T) {
+func Test_SimpleTree3x3(t *testing.T) {
 
 	rootNode := newNode1("", 0)
 
@@ -67,7 +67,28 @@ func Test_SimpleTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootNode.simpleTree(rootContext, 2, 2)
+	rootNode.simpleTree(rootContext, 3, 3)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println("Cancel")
+		rootContext.Cancel()
+	}()
+
+	rootContext.Wait()
+	fmt.Println("Finished")
+}
+
+func Test_Ladder(t *testing.T) {
+
+	rootNode := newNode1("", 0)
+
+	rootContext, err := context.NewRootContext(rootNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootNode.simpleTree(rootContext, 1, 20)
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
