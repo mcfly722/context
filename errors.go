@@ -1,36 +1,15 @@
 package context
 
-// ParentContextAlreadyInClosingStateError ...
-type GracefulShutdownInProcessError struct{}
+// CancelInProcessError ...
+type CancelInProcessError struct{}
 
-func (err *GracefulShutdownInProcessError) Error() string {
-	return "graceful shutdown in process. You cannot bind new childs during closing parent context. Just exit."
+func (err *CancelInProcessError) Error() string {
+	return "Cancel in process. You cannot bind new childs during closing parent context."
 }
 
-// ParentContextTriesToExitWithoutGracefulFinishError ...
-type ParentContextTriesToExitWithoutGracefulFinishError struct{}
+type customPanic string
 
-func (err *ParentContextTriesToExitWithoutGracefulFinishError) Error() string {
-	return "Parent context tries to Exit without GracefulFinish()"
-}
-
-// NewContextInstanceFromDisposingStateError ...
-type NewContextInstanceFromDisposingStateError struct{}
-
-func (err *NewContextInstanceFromDisposingStateError) Error() string {
-	return "Could not create new context for disposing context"
-}
-
-// NewContextInstanceFromFreezedStateError ...
-type NewContextInstanceFromFreezedStateError struct{}
-
-func (err *NewContextInstanceFromFreezedStateError) Error() string {
-	return "Could not create new context from freezed context"
-}
-
-// GracefulFinishFromDisposeStateError ...
-type GracefulFinishFromDisposeStateError struct{}
-
-func (err *GracefulFinishFromDisposeStateError) Error() string {
-	return "GracefulFinish() cloud not be called from dispose state"
-}
+const (
+	CancelFromDisposeStatePanic       customPanic = "Cancel() cloud not be called from dispose state"
+	ExitFromContextWithoutCancelPanic customPanic = "Exit from Context Without Cancel() method"
+)
