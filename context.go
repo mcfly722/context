@@ -1,8 +1,9 @@
 package context
 
-import "sync"
+import (
+	"sync"
+)
 
-// Context ...
 type Context interface {
 	// create new child context for instance what implements Instance interface
 	NewContextFor(instance ContextedInstance) (Context, error)
@@ -10,21 +11,24 @@ type Context interface {
 	// channel what closes when all childs are closed and you can exit from your current context. Dispose would be called.
 	IsOpen() chan struct{}
 
+	// process context closing
+	Process()
+
 	// finish all sub*childs, childs and current context
 	Cancel()
 }
 
-type contextState int64
+type contextState int
 
 const (
-	working contextState = iota
-	freezed
-	disposing
+	working   contextState = 0
+	freezed   contextState = 1
+	disposing contextState = 2
 )
 
 type context struct {
 	parent   *context
-	childs   map[*context]empty
+	childs   map[*context]*context
 	instance ContextedInstance
 	state    contextState
 	isOpened chan struct{}
@@ -35,7 +39,14 @@ type root struct {
 	ready sync.RWMutex
 }
 
-type empty struct{}
+func newEmptyContext() *context {
+	return &context{
+		childs:   map[*context]*context{},
+		state:    working,
+		isOpened: make(chan struct{}),
+		root:     &root{},
+	}
+}
 
 // NewContextFor ...
 func (parent *context) NewContextFor(instance ContextedInstance) (Context, error) {
@@ -50,29 +61,22 @@ func (parent *context) NewContextFor(instance ContextedInstance) (Context, error
 		return nil, &CancelInProcessError{}
 	}
 
-	// context_state_working
 	return newContextFor(parent, instance)
 }
 
 func newContextFor(parent *context, instance ContextedInstance) (Context, error) {
 	// goroutines unsafe
-	root := &root{}
-
-	if parent != nil {
-		root = parent.root
-	}
 
 	newContext := &context{
 		parent:   parent,
-		childs:   map[*context]empty{},
+		childs:   map[*context]*context{},
 		instance: instance,
 		state:    working,
 		isOpened: make(chan struct{}),
-		root:     root,
+		root:     parent.root,
 	}
 
-	parent.childs[newContext] = empty{}
-
+	parent.childs[newContext] = newContext
 	newContext.start()
 
 	return newContext, nil
@@ -87,18 +91,29 @@ func (current *context) contextRemoveFromParentChildsList() {
 	}
 }
 
-// IsOpen ...
-func (context *context) IsOpen() chan struct{} {
-	context.root.ready.RLock()
-	defer context.root.ready.RUnlock()
+func (context *context) setState(state contextState) {
+	context.root.ready.Lock()
+	context.state = state
+}
 
+func (context *context) Process() {
+	context.root.ready.RLock()
 	if context.state == freezed {
 		if len(context.childs) == 0 {
-			close(context.isOpened)
-			context.state = disposing
+			defer func() {
+				context.root.ready.Lock()
+				context.state = disposing
+				context.root.ready.Unlock()
+				close(context.isOpened)
+			}()
 		}
 	}
 
+	context.root.ready.RUnlock()
+}
+
+// IsOpen ...
+func (context *context) IsOpen() chan struct{} {
 	return context.isOpened
 }
 
@@ -125,13 +140,10 @@ func (current *context) freezeAllChildsAndSubchilds() {
 
 func (current *context) start() {
 	go func(current *context) {
-
 		current.instance.Go(current)
-
 		if current.state != disposing {
 			panic(ExitFromContextWithoutCancelPanic)
 		}
-
 		current.contextRemoveFromParentChildsList()
 	}(current)
 }

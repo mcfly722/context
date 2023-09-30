@@ -2,6 +2,7 @@ package context
 
 // RootContext ...
 type RootContext interface {
+	NewContextFor(instance ContextedInstance) (Context, error)
 	Wait()
 	Cancel()
 }
@@ -19,7 +20,9 @@ func NewRootContext(instance ContextedInstance) (RootContext, error) {
 		done:     make(chan struct{}),
 	}
 
-	rootContext, err := newContextFor(nil, root)
+	emptyContext := newEmptyContext()
+
+	rootContext, err := newContextFor(emptyContext, root)
 	if err != nil {
 		return nil, err
 	}
@@ -42,4 +45,8 @@ func (root *rootContext) Cancel() {
 func (root *rootContext) Go(current Context) {
 	root.instance.Go(current)
 	close(root.done)
+}
+
+func (root *rootContext) NewContextFor(instance ContextedInstance) (Context, error) {
+	return root.context.NewContextFor(instance)
 }

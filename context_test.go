@@ -5,74 +5,76 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mcfly722/context"
+	context "github.com/mcfly722/context"
 )
 
-type node struct {
-	close chan bool
+type node1 struct {
+	i    int
+	path string
 }
 
-//type debugger struct{}
+func (node *node1) name() string {
+	return (fmt.Sprintf("%v->%v", node.path, node.i))
+}
 
-func newNode() *node {
-	return &node{
-		close: make(chan bool),
+func newNode1(path string, i int) *node1 {
+
+	return &node1{
+		path: path,
+		i:    i,
 	}
 }
 
-func (node *node) Go(current context.Context) {
-
+func (node *node1) Go(current context.Context) {
 loop:
 	for {
 		select {
-		case <-node.close:
-			//fmt.Printf("Cancel()")
-			current.Cancel()
-		case _, opened := <-current.Opened():
+		case _, opened := <-current.IsOpen():
 			if !opened {
 				break loop
 			}
+		default:
+			current.Process()
 		}
-
 	}
+	fmt.Printf("%v finished\n", node.name())
 }
 
-func (node *node) Dispose(current context.Context) {}
+func (parent *node1) simpleTree(context context.ContextNode, width int, height int) {
+	if height > 0 {
 
-func (parent *node) buildContextTree(parentCtx context.Context, width int, depth int) context.Context {
-
-	if depth > 0 {
 		for i := 0; i < width; i++ {
-			newChildNode := newNode()
-			newChildContext, _ := parentCtx.NewContextFor(newChildNode, fmt.Sprintf("%v", i), "node")
-			newChildNode.buildContextTree(newChildContext, width, depth-1)
+
+			newNode := newNode1(fmt.Sprintf("%v->%v", parent.path, i), i)
+			newContext, err := context.NewContextFor(newNode)
+			if err == nil {
+				fmt.Printf("%v initiated\n", newNode.name())
+				newNode.simpleTree(newContext, width, height-1)
+			}
+
 		}
+
 	}
 
-	return nil
 }
 
 func Test_SimpleTree(t *testing.T) {
 
-	node := newNode()
+	rootNode := newNode1("", 0)
 
-	root := context.NewRootContext(context.NewConsoleLogDebugger(100, false))
-	ctx, err := root.NewContextFor(node, "0", "node")
+	rootContext, err := context.NewRootContext(rootNode)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
-	node.buildContextTree(ctx, 2, 5)
-
-	time.Sleep(1 * time.Second)
-	fmt.Println("send cancel")
-	node.close <- true
+	rootNode.simpleTree(rootContext, 2, 2)
 
 	go func() {
-		time.Sleep(1 * time.Second)
-		root.Cancel()
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println("Cancel")
+		rootContext.Cancel()
 	}()
 
-	root.Wait()
-
+	rootContext.Wait()
+	fmt.Println("Finished")
 }
