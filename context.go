@@ -24,7 +24,7 @@ const (
 
 type context struct {
 	parent   *context
-	childs   map[*context]*context
+	childs   map[*context]empty
 	instance ContextedInstance
 	state    contextState
 	isOpened chan struct{}
@@ -34,6 +34,8 @@ type context struct {
 type root struct {
 	ready sync.RWMutex
 }
+
+type empty struct{}
 
 // NewContextFor ...
 func (parent *context) NewContextFor(instance ContextedInstance) (Context, error) {
@@ -62,14 +64,14 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 
 	newContext := &context{
 		parent:   parent,
-		childs:   map[*context]*context{},
+		childs:   map[*context]empty{},
 		instance: instance,
 		state:    working,
 		isOpened: make(chan struct{}),
 		root:     root,
 	}
 
-	parent.childs[newContext] = newContext
+	parent.childs[newContext] = empty{}
 
 	newContext.start()
 
@@ -115,7 +117,7 @@ func (current *context) Cancel() {
 func (current *context) freezeAllChildsAndSubchilds() {
 	if current.state == working {
 		current.state = freezed
-		for _, child := range current.childs {
+		for child := range current.childs {
 			child.freezeAllChildsAndSubchilds()
 		}
 	}
