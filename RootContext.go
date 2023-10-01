@@ -23,9 +23,6 @@ func NewRootContext(instance ContextedInstance) (RootContext, error) {
 	emptyContext := newEmptyContext()
 
 	rootContext, _ := newContextFor(emptyContext, root)
-	if err != nil {
-		return nil, err
-	}
 
 	root.context = rootContext
 
