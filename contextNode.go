@@ -4,4 +4,7 @@ package context
 type ContextNode interface {
 	// create new child context for instance what implements Instance interface
 	NewContextFor(instance ContextedInstance) (Context, error)
+
+	// cancel current context
+	Cancel()
 }
