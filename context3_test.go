@@ -14,7 +14,9 @@ func (node *node3) Go(current context.Context) {
 
 		fmt.Printf("custom defer runned\n")
 		if recover != nil {
-			fmt.Printf("successfully catched Panic: %v\n", recover)
+			if recover == context.ExitFromContextWithoutCancelPanic {
+				fmt.Printf("successfully catched Panic: %v\n", recover)
+			}
 		}
 
 	})
