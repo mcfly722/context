@@ -61,9 +61,9 @@ const race_iterations int = 10000
 
 func Test_Race_RandomSimpleTree3x3(t *testing.T) {
 
-	for i := 0; i < race_iterations; i++ {
-		if ((i + 1) % 100) == 0 {
-			fmt.Printf("Test_Race_RandomSimpleTree3x3 %v/%v\n", i+1, race_iterations)
+	for i := 1; i <= race_iterations; i++ {
+		if (i % 100) == 0 {
+			fmt.Printf("Test_Race_RandomSimpleTree3x3 %v/%v\n", i, race_iterations)
 		}
 
 		rootNode := newNode2("", 0)
