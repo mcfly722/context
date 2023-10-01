@@ -2,6 +2,7 @@ package context_test
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -9,23 +10,25 @@ import (
 )
 
 type node1 struct {
-	i    int
-	path string
+	name  string
+	ready sync.Mutex
 }
 
-func (node *node1) name() string {
-	return (fmt.Sprintf("%v->%v", node.path, node.i))
+func (node *node1) getName() string {
+	node.ready.Lock()
+	defer node.ready.Unlock()
+	return node.name
 }
 
-func newNode1(path string, i int) *node1 {
-
+func newNode1(name string) *node1 {
 	return &node1{
-		path: path,
-		i:    i,
+		name: name,
 	}
 }
 
 func (node *node1) Go(current context.Context) {
+
+	fmt.Printf("go:             %v started\n", node.getName())
 loop:
 	for {
 		select {
@@ -38,21 +41,20 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("%v finished\n", node.name())
+	fmt.Printf("%v finished\n", node.getName())
 }
 
 func (parent *node1) simpleTree(context context.ContextNode, width int, height int) {
+
+	fmt.Printf("%v configured\n", parent.getName())
+
 	if height > 1 {
-
 		for i := 0; i < width; i++ {
-
-			newNode := newNode1(fmt.Sprintf("%v->%v", parent.path, i), i)
+			newNode := newNode1(fmt.Sprintf("%v->%v", parent.getName(), i))
 			newContext, err := context.NewContextFor(newNode)
 			if err == nil {
-				fmt.Printf("%v started\n", newNode.name())
 				newNode.simpleTree(newContext, width, height-1)
 			}
-
 		}
 
 	}
@@ -61,12 +63,14 @@ func (parent *node1) simpleTree(context context.ContextNode, width int, height i
 
 func Test_SimpleTree3x3(t *testing.T) {
 
-	rootNode := newNode1("", 0)
+	rootNode := newNode1("root")
 
 	rootContext, err := context.NewRootContext(rootNode)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	fmt.Printf("root context created Node=%v\n", rootNode.getName())
 
 	rootNode.simpleTree(rootContext, 3, 3)
 
@@ -77,13 +81,13 @@ func Test_SimpleTree3x3(t *testing.T) {
 	}()
 
 	rootContext.Wait()
-	fmt.Println("Finished")
+	fmt.Println("test done")
 
 }
 
 func Test_Ladder(t *testing.T) {
 
-	rootNode := newNode1("", 0)
+	rootNode := newNode1("root")
 
 	rootContext, err := context.NewRootContext(rootNode)
 	if err != nil {
@@ -99,5 +103,5 @@ func Test_Ladder(t *testing.T) {
 	}()
 
 	rootContext.Wait()
-	fmt.Println("Finished")
+	fmt.Println("test done")
 }
