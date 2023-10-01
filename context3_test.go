@@ -10,18 +10,19 @@ import (
 type node3 struct{}
 
 func (node *node3) Go(current context.Context) {
+
 	current.SetDefer(func(recover interface{}) {
 
-		fmt.Printf("custom defer runned\n")
+		fmt.Printf("defer:       custom defer runned\n")
 		if recover != nil {
 			if recover == context.ExitFromContextWithoutCancelPanic {
-				fmt.Printf("successfully catched Panic: %v\n", recover)
+				fmt.Printf("defer:       successfully catched Panic: %v\n", recover)
 			}
 		}
 
 	})
 
-	fmt.Printf("defer configured\n")
+	fmt.Printf("go:          defer configured\n")
 
 	// exit without Cancel() panic ...
 }
@@ -29,11 +30,13 @@ func (node *node3) Go(current context.Context) {
 func Test_DeferHandler_WithoutCancel(t *testing.T) {
 	rootNode := &node3{}
 
+	fmt.Printf("1. starting new root context\n")
 	rootContext, err := context.NewRootContext(rootNode)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	fmt.Printf("2. wait\n")
 	rootContext.Wait()
-	fmt.Printf("test finished\n")
+	fmt.Printf("3. test finished\n")
 }

@@ -41,8 +41,6 @@ type root struct {
 
 func newEmptyContext() *context {
 
-	empty := func(interface{}) {}
-
 	return &context{
 		parent:       &context{},
 		childs:       map[*context]*context{},
@@ -50,7 +48,7 @@ func newEmptyContext() *context {
 		state:        working,
 		isOpened:     make(chan struct{}),
 		root:         &root{},
-		deferHandler: &empty,
+		deferHandler: nil,
 	}
 }
 
@@ -72,8 +70,6 @@ func (parent *context) NewContextFor(instance ContextedInstance) (Context, error
 
 func newContextFor(parent *context, instance ContextedInstance) (Context, error) {
 
-	empty := func(interface{}) {}
-
 	newContext := &context{
 		parent:       parent,
 		childs:       map[*context]*context{},
@@ -81,7 +77,7 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 		state:        working,
 		isOpened:     make(chan struct{}),
 		root:         parent.root,
-		deferHandler: &empty,
+		deferHandler: nil,
 	}
 
 	parent.childs[newContext] = newContext
@@ -92,9 +88,11 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 		// set defer handler
 		defer func() {
 			current.root.ready.Lock()
-			deferHandler := *(current.deferHandler)
-			current.root.ready.Unlock()
-			deferHandler(recover()) // unfortunatelly recover() don't catch panic if you try to call it from handler, so you need catch it here
+			defer current.root.ready.Unlock()
+			if current.deferHandler != nil {
+				deferHandler := *(current.deferHandler)
+				deferHandler(recover()) // unfortunatelly recover() don't catch panic if you try to call it from function handler, so you need catch it here
+			}
 		}()
 
 		// execure user context select {...}
