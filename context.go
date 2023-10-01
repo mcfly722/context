@@ -113,10 +113,6 @@ func (current *context) Cancel() {
 	current.root.ready.Lock()
 	defer current.root.ready.Unlock()
 
-	if current.state == disposing {
-		panic(CancelFromDisposeStatePanic)
-	}
-
 	current.freezeAllChildsAndSubchilds()
 }
 

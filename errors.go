@@ -10,6 +10,5 @@ func (err *CancelInProcessError) Error() string {
 type customPanic string
 
 const (
-	CancelFromDisposeStatePanic       customPanic = "Cancel() cloud not be called from dispose state"
 	ExitFromContextWithoutCancelPanic customPanic = "Exit from Context Without Cancel() method"
 )
