@@ -11,9 +11,6 @@ type Context interface {
 	// channel what closes when all childs are closed and you can exit from your current context. Dispose would be called.
 	IsOpen() chan struct{}
 
-	// process context closing
-	Process()
-
 	// finish all sub*childs, childs and current context
 	Cancel()
 }
@@ -36,7 +33,7 @@ type context struct {
 }
 
 type root struct {
-	ready sync.RWMutex
+	ready sync.Mutex
 }
 
 func newEmptyContext() *context {
@@ -65,7 +62,6 @@ func (parent *context) NewContextFor(instance ContextedInstance) (Context, error
 }
 
 func newContextFor(parent *context, instance ContextedInstance) (Context, error) {
-	// goroutines unsafe
 
 	newContext := &context{
 		parent:   parent,
@@ -77,39 +73,34 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 	}
 
 	parent.childs[newContext] = newContext
-	newContext.start()
+
+	// Start new Context
+	go func(current *context) {
+
+		// execure user context select {...}
+		current.instance.Go(current)
+
+		if current.state != disposing {
+			panic(ExitFromContextWithoutCancelPanic)
+		}
+
+		{ // Remove node from parent childs and if parent is freezed and empty, initiate it disposing
+
+			current.root.ready.Lock()
+			defer current.root.ready.Unlock()
+
+			if current.parent != nil {
+				delete(current.parent.childs, current)
+				if current.parent.state == freezed && len(current.parent.childs) == 0 {
+					current.parent.state = disposing
+					close(current.parent.isOpened)
+				}
+			}
+		}
+
+	}(newContext)
 
 	return newContext, nil
-}
-
-func (current *context) contextRemoveFromParentChildsList() {
-	current.root.ready.Lock()
-	defer current.root.ready.Unlock()
-
-	if current.parent != nil {
-		delete(current.parent.childs, current)
-	}
-}
-
-func (context *context) setState(state contextState) {
-	context.root.ready.Lock()
-	context.state = state
-}
-
-func (context *context) Process() {
-	context.root.ready.RLock()
-	if context.state == freezed {
-		if len(context.childs) == 0 {
-			defer func() {
-				context.root.ready.Lock()
-				context.state = disposing
-				context.root.ready.Unlock()
-				close(context.isOpened)
-			}()
-		}
-	}
-
-	context.root.ready.RUnlock()
 }
 
 // IsOpen ...
@@ -130,20 +121,16 @@ func (current *context) Cancel() {
 }
 
 func (current *context) freezeAllChildsAndSubchilds() {
+
 	if current.state == working {
 		current.state = freezed
 		for child := range current.childs {
 			child.freezeAllChildsAndSubchilds()
 		}
 	}
-}
 
-func (current *context) start() {
-	go func(current *context) {
-		current.instance.Go(current)
-		if current.state != disposing {
-			panic(ExitFromContextWithoutCancelPanic)
-		}
-		current.contextRemoveFromParentChildsList()
-	}(current)
+	if current.state == freezed && len(current.childs) == 0 {
+		current.state = disposing
+		close(current.isOpened)
+	}
 }

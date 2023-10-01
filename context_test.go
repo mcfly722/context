@@ -33,8 +33,6 @@ loop:
 			if !opened {
 				break loop
 			}
-		default:
-			current.Process()
 		}
 	}
 	fmt.Printf("%v finished\n", node.name())
@@ -77,6 +75,7 @@ func Test_SimpleTree3x3(t *testing.T) {
 
 	rootContext.Wait()
 	fmt.Println("Finished")
+
 }
 
 func Test_Ladder(t *testing.T) {
