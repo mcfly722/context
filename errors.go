@@ -1,10 +1,17 @@
 package context
 
-// CancelInProcessError ...
-type CancelInProcessError struct{}
+// CancelInProcessForFreezeError ...
+type CancelInProcessForFreezeError struct{}
 
-func (err *CancelInProcessError) Error() string {
-	return "Cancel in process. You cannot bind new childs during closing parent context."
+func (err *CancelInProcessForFreezeError) Error() string {
+	return "Cancel in process. Current context state=freeze. You cannot bind new child context during closing parent context."
+}
+
+// CancelInProcessForDisposingError ...
+type CancelInProcessForDisposingError struct{}
+
+func (err *CancelInProcessForDisposingError) Error() string {
+	return "Cancel in process. Current context state=disposing. You cannot bind new child context during closing parent context."
 }
 
 type customPanic string

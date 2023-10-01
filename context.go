@@ -60,9 +60,9 @@ func (parent *context) NewContextFor(instance ContextedInstance) (Context, error
 
 	switch parent.state {
 	case freezed:
-		return nil, &CancelInProcessError{}
+		return nil, &CancelInProcessForFreezeError{}
 	case disposing:
-		return nil, &CancelInProcessError{}
+		return nil, &CancelInProcessForDisposingError{}
 	}
 
 	return newContextFor(parent, instance)

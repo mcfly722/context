@@ -26,7 +26,7 @@ func (node *node4) Go(current context.Context) {
 	fmt.Printf("go: creating new SubContext\n")
 	_, err := current.NewContextFor(newNode)
 	if err != nil {
-		_, ok := err.(*context.CancelInProcessError)
+		_, ok := err.(*context.CancelInProcessForDisposingError)
 		if ok {
 			fmt.Printf("go: successfully catched error: %v\n", err)
 			rootContext.Cancel()

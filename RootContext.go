@@ -22,7 +22,7 @@ func NewRootContext(instance ContextedInstance) (RootContext, error) {
 
 	emptyContext := newEmptyContext()
 
-	rootContext, err := newContextFor(emptyContext, root)
+	rootContext, _ := newContextFor(emptyContext, root)
 	if err != nil {
 		return nil, err
 	}
