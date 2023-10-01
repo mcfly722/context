@@ -33,6 +33,9 @@ loop:
 			if !opened {
 				break loop
 			}
+		default:
+			{
+			}
 		}
 	}
 	fmt.Printf("%v finished\n", node.name())
@@ -68,7 +71,7 @@ func Test_SimpleTree3x3(t *testing.T) {
 	rootNode.simpleTree(rootContext, 3, 3)
 
 	go func() {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		fmt.Println("Cancel")
 		rootContext.Cancel()
 	}()
