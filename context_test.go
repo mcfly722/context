@@ -33,8 +33,6 @@ loop:
 			if !opened {
 				break loop
 			}
-		default:
-			current.Process()
 		}
 	}
 	fmt.Printf("%v finished\n", node.name())
