@@ -13,6 +13,8 @@ type Context interface {
 
 	// finish all sub*childs, childs and current context
 	Cancel()
+
+	SetDefer(func(interface{}))
 }
 
 type contextState int
@@ -24,12 +26,13 @@ const (
 )
 
 type context struct {
-	parent   *context
-	childs   map[*context]*context
-	instance ContextedInstance
-	state    contextState
-	isOpened chan struct{}
-	root     *root
+	parent       *context
+	childs       map[*context]*context
+	instance     ContextedInstance
+	state        contextState
+	isOpened     chan struct{}
+	root         *root
+	deferHandler *func(interface{})
 }
 
 type root struct {
@@ -37,11 +40,17 @@ type root struct {
 }
 
 func newEmptyContext() *context {
+
+	empty := func(interface{}) {}
+
 	return &context{
-		childs:   map[*context]*context{},
-		state:    working,
-		isOpened: make(chan struct{}),
-		root:     &root{},
+		parent:       &context{},
+		childs:       map[*context]*context{},
+		instance:     nil,
+		state:        working,
+		isOpened:     make(chan struct{}),
+		root:         &root{},
+		deferHandler: &empty,
 	}
 }
 
@@ -63,19 +72,30 @@ func (parent *context) NewContextFor(instance ContextedInstance) (Context, error
 
 func newContextFor(parent *context, instance ContextedInstance) (Context, error) {
 
+	empty := func(interface{}) {}
+
 	newContext := &context{
-		parent:   parent,
-		childs:   map[*context]*context{},
-		instance: instance,
-		state:    working,
-		isOpened: make(chan struct{}),
-		root:     parent.root,
+		parent:       parent,
+		childs:       map[*context]*context{},
+		instance:     instance,
+		state:        working,
+		isOpened:     make(chan struct{}),
+		root:         parent.root,
+		deferHandler: &empty,
 	}
 
 	parent.childs[newContext] = newContext
 
 	// Start new Context
 	go func(current *context) {
+
+		// set defer handler
+		defer func() {
+			current.root.ready.Lock()
+			deferHandler := *(current.deferHandler)
+			current.root.ready.Unlock()
+			deferHandler(recover())
+		}()
 
 		// execure user context select {...}
 		current.instance.Go(current)
@@ -84,19 +104,16 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 			panic(ExitFromContextWithoutCancelPanic)
 		}
 
-		{ // Remove node from parent childs and if parent is freezed and empty, initiate it disposing
-
-			current.root.ready.Lock()
-			defer current.root.ready.Unlock()
-
-			if current.parent != nil {
-				delete(current.parent.childs, current)
-				if current.parent.state == freezed && len(current.parent.childs) == 0 {
-					current.parent.state = disposing
-					close(current.parent.isOpened)
-				}
+		// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
+		current.root.ready.Lock()
+		if current.parent != nil {
+			delete(current.parent.childs, current)
+			if current.parent.state == freezed && len(current.parent.childs) == 0 {
+				current.parent.state = disposing
+				close(current.parent.isOpened)
 			}
 		}
+		current.root.ready.Unlock()
 
 	}(newContext)
 
@@ -129,4 +146,10 @@ func (current *context) freezeAllChildsAndSubchilds() {
 		current.state = disposing
 		close(current.isOpened)
 	}
+}
+
+func (current *context) SetDefer(deferFunction func(interface{})) {
+	current.root.ready.Lock()
+	current.deferHandler = &deferFunction
+	current.root.ready.Unlock()
 }
