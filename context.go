@@ -94,7 +94,7 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 			current.root.ready.Lock()
 			deferHandler := *(current.deferHandler)
 			current.root.ready.Unlock()
-			deferHandler(recover())
+			deferHandler(recover()) // unfortunatelly recover() don't catch panic if you try to call it from handler, so you need catch it here
 		}()
 
 		// execure user context select {...}
