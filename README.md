@@ -1,4 +1,8 @@
 # context
+![Version: version](https://img.shields.io/badge/version-1.0.0.1-success.svg)
+![Tests: tests](https://img.shields.io/badge/tests-✔100%-success.svg)
+[![License: GPL3.0](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
+<br>
 Unfortunately the standard golang [context package](https://github.com/golang/go/tree/master/src/context) does not control closing order of child contexts. ([issue #51075](https://github.com/golang/go/issues/51075))<br>
 (parent context could exit earlier than his child, and in this case you could get unpredicted execution behaviour when you try to use some parent resources which is already disposed)
 
