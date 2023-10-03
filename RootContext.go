@@ -45,6 +45,7 @@ func (root *rootContext) Go(current Context) {
 	close(root.done)
 }
 
+// This function uses to generate new child context from root or other child context
 func (root *rootContext) NewContextFor(instance ContextedInstance) (Context, error) {
 	return root.context.NewContextFor(instance)
 }
