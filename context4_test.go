@@ -8,7 +8,7 @@ import (
 )
 
 type node4 struct {
-	cancel chan context.ContextNode
+	cancel chan context.ChildContext
 }
 
 func (node *node4) Go(current context.Context) {
@@ -40,7 +40,7 @@ func (node *node4) Go(current context.Context) {
 func Test_NewInstanceDuringCancel(t *testing.T) {
 
 	rootNode := &node4{
-		cancel: make(chan context.ContextNode),
+		cancel: make(chan context.ChildContext),
 	}
 
 	fmt.Printf("1 - creating new context \n")

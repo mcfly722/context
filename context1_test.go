@@ -44,7 +44,7 @@ loop:
 	fmt.Printf("%v finished\n", node.getName())
 }
 
-func (parent *node1) simpleTree(context context.ContextNode, width int, height int) {
+func (parent *node1) simpleTree(context context.ChildContext, width int, height int) {
 
 	fmt.Printf("%v configured\n", parent.getName())
 

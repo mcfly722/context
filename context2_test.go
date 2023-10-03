@@ -39,7 +39,7 @@ loop:
 	}
 }
 
-func (parent *node2) simpleTree2(context context.ContextNode, width int, height int) {
+func (parent *node2) simpleTree2(context context.ChildContext, width int, height int) {
 	if height > 1 {
 
 		for i := 0; i < width; i++ {

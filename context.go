@@ -30,7 +30,7 @@ import (
 type Context interface {
 
 	// Method creates new child context for instance what implements ContextedInstance interface
-	NewContextFor(instance ContextedInstance) (Context, error)
+	NewContextFor(instance ContextedInstance) (ChildContext, error)
 
 	// Method receives channel what could be used to understand when you can close your current context (all childs are already served and terminated).
 	Context() chan struct{}
@@ -78,7 +78,7 @@ func newEmptyContext() *context {
 }
 
 // NewContextFor ...
-func (parent *context) NewContextFor(instance ContextedInstance) (Context, error) {
+func (parent *context) NewContextFor(instance ContextedInstance) (ChildContext, error) {
 
 	parent.root.ready.Lock()
 	defer parent.root.ready.Unlock()
@@ -93,7 +93,7 @@ func (parent *context) NewContextFor(instance ContextedInstance) (Context, error
 	return newContextFor(parent, instance)
 }
 
-func newContextFor(parent *context, instance ContextedInstance) (Context, error) {
+func newContextFor(parent *context, instance ContextedInstance) (*context, error) {
 
 	newContext := &context{
 		parent:       parent,

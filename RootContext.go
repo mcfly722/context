@@ -5,7 +5,7 @@ type RootContext interface {
 
 	// Method creates new Context from your instance what implements [ContextedInstance] interface.
 	// If current root context is already in closing state it returns [CancelInProcessForFreezeError] or [CancelInProcessForDisposingError]
-	NewContextFor(instance ContextedInstance) (Context, error)
+	NewContextFor(instance ContextedInstance) (ChildContext, error)
 
 	// Method waits till current root context would be canceled.
 	Wait()
@@ -53,6 +53,6 @@ func (root *rootContext) Go(current Context) {
 }
 
 // This function uses to generate new child context from root or other child context
-func (root *rootContext) NewContextFor(instance ContextedInstance) (Context, error) {
+func (root *rootContext) NewContextFor(instance ContextedInstance) (ChildContext, error) {
 	return root.context.NewContextFor(instance)
 }
