@@ -1,3 +1,22 @@
+// Package implements graceful shutdown context tree for your goroutines.
+//
+// It means that parent context wouldn't close until all its child's doesn't close.
+//
+// # example:
+//
+// You creating context tree:
+//
+// root -> child1 -> child2 -> child3
+//
+// and trying to Close() root.
+//
+// All subchilds would be closed in reverse order (first - child3, then child2, child1, root).
+// This closing order is absolutely essential because child context could use some parent resources, send some signals to parent. If parent would be closed before it's child it would casue undefined behaviour or goroutine locking.
+// Unfortunatelly standard library contains context package without this closing ordering.
+//
+// Issue: https://github.com/golang/go/issues/51075
+//
+// This module resolves this problem and guarantee correct closing order.
 package context
 
 import (

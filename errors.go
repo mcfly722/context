@@ -1,13 +1,11 @@
 package context
 
-// CancelInProcessForFreezeError ...
 type CancelInProcessForFreezeError struct{}
 
 func (err *CancelInProcessForFreezeError) Error() string {
 	return "Cancel in process. Current context state=freeze. You cannot bind new child context during closing parent context."
 }
 
-// CancelInProcessForDisposingError ...
 type CancelInProcessForDisposingError struct{}
 
 func (err *CancelInProcessForDisposingError) Error() string {
@@ -16,6 +14,4 @@ func (err *CancelInProcessForDisposingError) Error() string {
 
 type customPanic string
 
-const (
-	ExitFromContextWithoutCancelPanic customPanic = "Exit from Context Without Cancel() method"
-)
+const ExitFromContextWithoutCancelPanic customPanic = "Exit from Context Without Cancel() method"
