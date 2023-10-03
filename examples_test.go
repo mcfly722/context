@@ -38,11 +38,7 @@ loop:
 
 func Example() {
 
-	rootContext, err := context.NewRootContext(newNode("root"))
-	if err != nil {
-		panic(err)
-	}
-
+	rootContext := context.NewRootContext(newNode("root"))
 	child1Context, _ := rootContext.NewContextFor(newNode("child1"))
 	child2Context, _ := child1Context.NewContextFor(newNode("child2"))
 	child2Context.NewContextFor(newNode("child3"))

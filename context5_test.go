@@ -51,13 +51,10 @@ func Test_FailCreateContextFromRootNode(t *testing.T) {
 	childNode := &childNode5{}
 
 	fmt.Printf("1 - creating new root context\n")
-	rootContext, err := context.NewRootContext(rootNode)
-	if err != nil {
-		t.Fatal(err)
-	}
+	rootContext := context.NewRootContext(rootNode)
 
 	fmt.Printf("2 - creating child context\n")
-	_, err = rootContext.NewContextFor(childNode)
+	_, err := rootContext.NewContextFor(childNode)
 	if err != nil {
 		t.Fatal(err)
 	}

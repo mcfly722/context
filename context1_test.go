@@ -65,10 +65,7 @@ func Test_SimpleTree3x3(t *testing.T) {
 
 	rootNode := newNode1("root")
 
-	rootContext, err := context.NewRootContext(rootNode)
-	if err != nil {
-		t.Fatal(err)
-	}
+	rootContext := context.NewRootContext(rootNode)
 
 	fmt.Printf("root context created Node=%v\n", rootNode.getName())
 
@@ -89,10 +86,7 @@ func Test_Ladder(t *testing.T) {
 
 	rootNode := newNode1("root")
 
-	rootContext, err := context.NewRootContext(rootNode)
-	if err != nil {
-		t.Fatal(err)
-	}
+	rootContext := context.NewRootContext(rootNode)
 
 	rootNode.simpleTree(rootContext, 1, 20)
 

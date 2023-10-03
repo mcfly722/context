@@ -68,10 +68,7 @@ func Test_Race_RandomSimpleTree3x3(t *testing.T) {
 
 		rootNode := newNode2("", 0)
 
-		rootContext, err := context.NewRootContext(rootNode)
-		if err != nil {
-			t.Fatal(err)
-		}
+		rootContext := context.NewRootContext(rootNode)
 
 		rootNode.simpleTree2(rootContext, 3, 3)
 

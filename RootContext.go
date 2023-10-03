@@ -13,7 +13,8 @@ type rootContext struct {
 	done     chan struct{}
 }
 
-func NewRootContext(instance ContextedInstance) (RootContext, error) {
+// NewRootContext generates and starts new root context
+func NewRootContext(instance ContextedInstance) RootContext {
 
 	root := &rootContext{
 		instance: instance,
@@ -26,7 +27,7 @@ func NewRootContext(instance ContextedInstance) (RootContext, error) {
 
 	root.context = rootContext
 
-	return root, nil
+	return root
 }
 
 // Wait ...

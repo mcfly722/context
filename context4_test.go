@@ -44,10 +44,7 @@ func Test_NewInstanceDuringCancel(t *testing.T) {
 	}
 
 	fmt.Printf("1 - creating new context \n")
-	rootContext, err := context.NewRootContext(rootNode)
-	if err != nil {
-		t.Fatal(err)
-	}
+	rootContext := context.NewRootContext(rootNode)
 
 	fmt.Printf("2 - send rootContext to node cancel channel\n")
 	rootNode.cancel <- rootContext

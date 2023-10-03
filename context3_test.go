@@ -31,10 +31,7 @@ func Test_DeferHandler_WithoutCancel(t *testing.T) {
 	rootNode := &node3{}
 
 	fmt.Printf("1. starting new root context\n")
-	rootContext, err := context.NewRootContext(rootNode)
-	if err != nil {
-		t.Fatal(err)
-	}
+	rootContext := context.NewRootContext(rootNode)
 
 	fmt.Printf("2. wait\n")
 	rootContext.Wait()
