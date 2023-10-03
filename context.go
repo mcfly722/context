@@ -118,7 +118,7 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 	return newContext, nil
 }
 
-// IsOpen ...
+// Context ...
 func (context *context) Context() chan struct{} {
 	return context.isOpened
 }
