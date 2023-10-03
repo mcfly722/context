@@ -11,28 +11,34 @@
 // and trying to Close() root.
 //
 // All subchilds would be closed in reverse order (first - child3, then child2, child1, root).
-// This closing order is absolutely essential because child context could use some parent resources, send some signals to parent. If parent would be closed before it's child it would casue undefined behaviour or goroutine locking.
-// Unfortunatelly standard library contains context package without this closing ordering.
+// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent would be closed before it child, it will cause undefined behaviour or goroutine locking.
 //
-// Issue: https://github.com/golang/go/issues/51075
+// Unfortunately, context from standard Go library does not guarantee this close order.
 //
-// This module resolves this problem and guarantee correct closing order.
+// See issue: https://github.com/golang/go/issues/51075
+//
+// This module resolves this problem and guarantee correct closing.
 package context
 
 import (
 	"sync"
 )
 
+// Instances of this interfaces sends to your node through Go() method.
+//
+// (see [ContextedInstance])
 type Context interface {
-	// create new child context for instance what implements Instance interface
+
+	// Method creates new child context for instance what implements ContextedInstance interface
 	NewContextFor(instance ContextedInstance) (Context, error)
 
-	// channel what closes when all childs are closed and you can exit from your current context. Dispose would be called.
+	// Method receives channel what could be used to understand when you can close your current context (all childs are already served and terminated).
 	Context() chan struct{}
 
-	// finish all sub*childs, childs and current context
+	// Method cancel current context and all childs according reverse order.
 	Cancel()
 
+	// Method used to set defer handler function to recover from panics inside Go(...) method of your [ContextedInstance]
 	SetDefer(func(interface{}))
 }
 
