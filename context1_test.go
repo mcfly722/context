@@ -32,8 +32,8 @@ func (node *node1) Go(current context.Context) {
 loop:
 	for {
 		select {
-		case _, opened := <-current.IsOpen():
-			if !opened {
+		case _, isOpened := <-current.Context():
+			if !isOpened {
 				break loop
 			}
 		default:

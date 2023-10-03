@@ -15,8 +15,8 @@ func (node *childNode5) Go(current context.Context) {
 loop:
 	for {
 		select {
-		case _, opened := <-current.IsOpen():
-			if !opened {
+		case _, isOpened := <-current.Context():
+			if !isOpened {
 				break loop
 			}
 		default:
@@ -33,8 +33,8 @@ func (node *rootNode5) Go(current context.Context) {
 loop:
 	for {
 		select {
-		case _, opened := <-current.IsOpen():
-			if !opened {
+		case _, isOpened := <-current.Context():
+			if !isOpened {
 				break loop
 			}
 		default:

@@ -28,8 +28,8 @@ loop:
 		select {
 		case <-time.After(time.Duration(rand.Intn(100)) * time.Microsecond):
 			current.Cancel()
-		case _, opened := <-current.IsOpen():
-			if !opened {
+		case _, isOpened := <-current.Context():
+			if !isOpened {
 				break loop
 			}
 		default:

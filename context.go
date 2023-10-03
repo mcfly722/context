@@ -9,7 +9,7 @@ type Context interface {
 	NewContextFor(instance ContextedInstance) (Context, error)
 
 	// channel what closes when all childs are closed and you can exit from your current context. Dispose would be called.
-	IsOpen() chan struct{}
+	Context() chan struct{}
 
 	// finish all sub*childs, childs and current context
 	Cancel()
@@ -119,7 +119,7 @@ func newContextFor(parent *context, instance ContextedInstance) (Context, error)
 }
 
 // IsOpen ...
-func (context *context) IsOpen() chan struct{} {
+func (context *context) Context() chan struct{} {
 	return context.isOpened
 }
 
