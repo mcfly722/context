@@ -6,18 +6,18 @@
 //
 // You creating context tree:
 //
-// root -> child1 -> child2 -> child3
+// root => child1 => child2 => child3
 //
-// and trying to Close() root.
+// and trying to close root.
 //
 // All subchilds would be closed in reverse order (first - child3, then child2, child1, root).
-// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent would be closed before it child, it will cause undefined behaviour or goroutine locking.
+// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent would be closed before child, it will cause undefined behaviour or goroutine locking.
 //
 // Unfortunately, context from standard Go library does not guarantee this close order.
 //
 // See issue: https://github.com/golang/go/issues/51075
 //
-// This module resolves this problem and guarantee correct closing.
+// This module resolves this problem and guarantee correct closing order.
 package context
 
 import (
