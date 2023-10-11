@@ -6,7 +6,7 @@
 Unfortunately the standard golang [context package](https://github.com/golang/go/tree/master/src/context) does not control closing order of child contexts ([issue #51075](https://github.com/golang/go/issues/51075)).<br>
 (parent context could exit earlier than his child, and in this case you could get unpredicted execution behaviour when you try to use some parent resources which is already closed)
 
-To resolve this issue, this is another implementation of context pattern.<br>
+To resolve this issue, here is another implementation of this context pattern.<br>
 It waits till all child contexts will correctly closes (parent event loop would be available for servicing it childs). Only when all childs would be closed, then parent would exit to.
 
 ### Documentation: [GoDoc](https://pkg.go.dev/github.com/mcfly722/context)
