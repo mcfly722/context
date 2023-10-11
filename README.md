@@ -60,7 +60,7 @@ ctx0 := context.NewRootContext(node0)
 ```
 ctx1, err := ctx0.NewContextFor(node1)
 if err != nil {
-	// child context does not created successfully, possibly parent in closing state, you need just exit
+	// child context does not created successfully, possibly parent is in closing state, you need just exit
 } else {
 	// child context created successfully
 }
