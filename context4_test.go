@@ -3,54 +3,85 @@ package context_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	context "github.com/mcfly722/context"
 )
 
-type node4 struct {
-	cancel chan context.ChildContext
-}
+type childNode5 struct{}
+type rootNode5 struct{}
 
-func (node *node4) Go(current context.Context) {
-
-	fmt.Printf("go: waiting for root context\n")
-	rootContext := <-node.cancel
-
-	fmt.Printf("go: root context obtained\n")
-
-	newNode := &node4{}
-
-	fmt.Printf("go: cancel context\n")
-	current.Cancel()
-
-	fmt.Printf("go: creating new SubContext\n")
-	_, err := current.NewContextFor(newNode)
-	if err != nil {
-		_, ok := err.(*context.CancelInProcessForDisposingError)
-		if ok {
-			fmt.Printf("go: successfully catched error: %v\n", err)
-			rootContext.Cancel()
-		} else {
-			panic("uncatched error")
+func (node *childNode5) Go(current context.Context) {
+loop:
+	for {
+		select {
+		case _, isOpened := <-current.Context():
+			if !isOpened {
+				break loop
+			}
+		default:
+			{
+			}
 		}
-
 	}
+	fmt.Printf("go:     childNode disposing for 300ms\n")
+	time.Sleep(300 * time.Millisecond)
+	fmt.Printf("go:     childNode finished\n")
 }
 
-func Test_NewInstanceDuringCancel(t *testing.T) {
-
-	rootNode := &node4{
-		cancel: make(chan context.ChildContext),
+func (node *rootNode5) Go(current context.Context) {
+loop:
+	for {
+		select {
+		case _, isOpened := <-current.Context():
+			if !isOpened {
+				break loop
+			}
+		default:
+			{
+			}
+		}
 	}
+	fmt.Printf("go:     rootNode finished\n")
+}
 
-	fmt.Printf("1 - creating new context \n")
+func Test_FailCreateContextFromRootNode(t *testing.T) {
+
+	rootNode := &rootNode5{}
+	childNode := &childNode5{}
+
+	fmt.Printf("1 - creating new root context\n")
 	rootContext := context.NewRootContext(rootNode)
 
-	fmt.Printf("2 - send rootContext to node cancel channel\n")
-	rootNode.cancel <- rootContext
+	fmt.Printf("2 - creating child context\n")
+	_, err := rootContext.NewContextFor(childNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		fmt.Printf("4 - Canceling root context\n")
+		rootContext.Cancel()
+
+		fmt.Printf("5 - trying to create new context from closed root context...\n")
+
+		newChildNode := &childNode5{}
+		_, err := rootContext.NewContextFor(newChildNode)
+		if err != nil {
+			_, ok := err.(*context.CancelInProcessForFreezeError)
+			if ok {
+				fmt.Printf("6 - successfully catched error: %v\n", err)
+			} else {
+				panic("6 - uncatched error")
+			}
+		} else {
+			panic("6 - uncatched error")
+		}
+	}()
 
 	fmt.Printf("3 - Wait\n")
 	rootContext.Wait()
 
-	fmt.Printf("4 - test finished\n")
+	fmt.Printf("7 - test finished\n")
 }

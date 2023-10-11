@@ -37,9 +37,6 @@ type Context interface {
 
 	// Method cancel current context and all childs according reverse order.
 	Cancel()
-
-	// Method used to set defer handler function to recover from panics inside Go(...) method of your [ContextedInstance]
-	SetDefer(func(interface{}))
 }
 
 type contextState int
@@ -51,13 +48,12 @@ const (
 )
 
 type context struct {
-	parent       *context
-	childs       map[*context]*context
-	instance     ContextedInstance
-	state        contextState
-	isOpened     chan struct{}
-	root         *root
-	deferHandler *func(interface{})
+	parent   *context
+	childs   map[*context]*context
+	instance ContextedInstance
+	state    contextState
+	isOpened chan struct{}
+	root     *root
 }
 
 type root struct {
@@ -67,13 +63,12 @@ type root struct {
 func newEmptyContext() *context {
 
 	return &context{
-		parent:       &context{},
-		childs:       map[*context]*context{},
-		instance:     nil,
-		state:        working,
-		isOpened:     make(chan struct{}),
-		root:         &root{},
-		deferHandler: nil,
+		parent:   &context{},
+		childs:   map[*context]*context{},
+		instance: nil,
+		state:    working,
+		isOpened: make(chan struct{}),
+		root:     &root{},
 	}
 }
 
@@ -96,29 +91,18 @@ func (parent *context) NewContextFor(instance ContextedInstance) (ChildContext, 
 func newContextFor(parent *context, instance ContextedInstance) (*context, error) {
 
 	newContext := &context{
-		parent:       parent,
-		childs:       map[*context]*context{},
-		instance:     instance,
-		state:        working,
-		isOpened:     make(chan struct{}),
-		root:         parent.root,
-		deferHandler: nil,
+		parent:   parent,
+		childs:   map[*context]*context{},
+		instance: instance,
+		state:    working,
+		isOpened: make(chan struct{}),
+		root:     parent.root,
 	}
 
 	parent.childs[newContext] = newContext
 
 	// Start new Context
 	go func(current *context) {
-
-		// set defer handler
-		defer func() {
-			current.root.ready.Lock()
-			defer current.root.ready.Unlock()
-			if current.deferHandler != nil {
-				deferHandler := *(current.deferHandler)
-				deferHandler(recover()) // unfortunatelly recover() don't catch panic if you try to call it from function handler, so you need catch it here
-			}
-		}()
 
 		// execure user context select {...}
 		current.instance.Go(current)
@@ -169,10 +153,4 @@ func (current *context) freezeAllChildsAndSubchilds() {
 		current.state = disposing
 		close(current.isOpened)
 	}
-}
-
-func (current *context) SetDefer(deferFunction func(interface{})) {
-	current.root.ready.Lock()
-	current.deferHandler = &deferFunction
-	current.root.ready.Unlock()
 }
