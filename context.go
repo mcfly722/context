@@ -1,268 +1,156 @@
+// Package implements graceful shutdown context tree for your goroutines.
+//
+// It means that parent context wouldn't close until all its child's doesn't close.
+//
+// # example:
+//
+// You creating context tree:
+//
+// root => child1 => child2 => child3
+//
+// and trying to close root.
+//
+// All subchilds would be closed in reverse order (first - child3, then child2, child1, root).
+// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent would be closed before child, it will cause undefined behaviour or goroutine locking.
+//
+// Unfortunately, context from standard Go library does not guarantee this close order.
+//
+// See issue: https://github.com/golang/go/issues/51075
+//
+// This module resolves this problem and guarantee correct closing order.
 package context
 
 import (
-	"fmt"
 	"sync"
 )
 
-// ParentContextAlreadyInClosingStateError ...
-type ParentContextAlreadyInClosingStateError struct{}
-
-func (err *ParentContextAlreadyInClosingStateError) Error() string {
-	return "Context already in closing state, you cannot bind childs for it"
-}
-
-// Context ...
+// Instances of this interfaces sends to your node through Go() method.
+//
+// (see [ContextedInstance])
 type Context interface {
-	NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) // create new child context
-	SetOnBeforeClosing(handler func(Context))                                                              // this handler calls for current context before closing all child and subchild contexts
-	Opened() chan struct{}                                                                                 // channel what closes when all childs are closed and you can close current context
-	Cancel()                                                                                               // sends signal to current and all child contexts to close hierarchy gracefully (childs first, parent second)
-	Log(arguments ...interface{})                                                                          // log context even
-	log(objects []interface{})
-	wait()
+
+	// Method creates new child context for instance what implements ContextedInstance interface
+	NewContextFor(instance ContextedInstance) (ChildContext, error)
+
+	// Method receives channel what could be used to understand when you can close your current context (all childs are already served and terminated).
+	Context() chan struct{}
+
+	// Method cancel current context and all childs according reverse order.
+	Cancel()
 }
 
-// ContextedInstance ...
-type ContextedInstance interface {
-	Go(current Context)
+type contextState int
+
+const (
+	working   contextState = 0
+	freezed   contextState = 1
+	disposing contextState = 2
+)
+
+type context struct {
+	parent   *context
+	childs   map[*context]*context
+	instance ContextedInstance
+	state    contextState
+	isOpened chan struct{}
+	root     *root
 }
 
-type tree struct {
-	changesAllowed sync.Mutex
-	closingAllowed sync.Mutex
-	debugger       Debugger
+type root struct {
+	ready sync.Mutex
 }
 
-type ctx struct {
-	id                    int64
-	parent                *ctx
-	childs                map[int64]*ctx
-	nextChildID           int64
-	instance              ContextedInstance
-	childsCreatingAllowed bool
-	childsWaitGroup       sync.WaitGroup
-	loopWaitGroup         sync.WaitGroup
-	opened                chan struct{}
-	tree                  *tree
+func newEmptyContext() *context {
 
-	closed      bool
-	closedMutex sync.Mutex
-
-	onBeforeClosing      func(current Context)
-	onBeforeClosingMutex sync.Mutex
-
-	debuggerNodePath []DebugNode // it is not a pointer, it is full array copy
-	debuggerMutex    sync.Mutex
+	return &context{
+		parent:   &context{},
+		childs:   map[*context]*context{},
+		instance: nil,
+		state:    working,
+		isOpened: make(chan struct{}),
+		root:     &root{},
+	}
 }
 
-func newContextFor(instance ContextedInstance, debugger Debugger) (Context, error) {
+// NewContextFor ...
+func (parent *context) NewContextFor(instance ContextedInstance) (ChildContext, error) {
 
-	newContext := &ctx{
-		id:                    0,
-		parent:                nil,
-		debuggerNodePath:      []DebugNode{{ID: 0, ComponentType: "root", ComponentName: "root"}},
-		childs:                make(map[int64]*ctx),
-		nextChildID:           0,
-		instance:              instance,
-		childsCreatingAllowed: true,
-		opened:                make(chan struct{}),
-		tree:                  &tree{debugger: debugger},
-		onBeforeClosing:       func(current Context) {},
-		closed:                false,
+	parent.root.ready.Lock()
+	defer parent.root.ready.Unlock()
+
+	switch parent.state {
+	case freezed:
+		return nil, &CancelInProcessForFreezeError{}
+	case disposing:
+		return nil, &CancelInProcessForDisposingError{}
 	}
 
-	newContext.start()
+	return newContextFor(parent, instance)
+}
+
+func newContextFor(parent *context, instance ContextedInstance) (*context, error) {
+
+	newContext := &context{
+		parent:   parent,
+		childs:   map[*context]*context{},
+		instance: instance,
+		state:    working,
+		isOpened: make(chan struct{}),
+		root:     parent.root,
+	}
+
+	parent.childs[newContext] = newContext
+
+	// Start new Context
+	go func(current *context) {
+
+		// execure user context select {...}
+		current.instance.Go(current)
+
+		if current.state != disposing {
+			panic(ExitFromContextWithoutCancelPanic)
+		}
+
+		// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
+		current.root.ready.Lock()
+		if current.parent != nil {
+			delete(current.parent.childs, current)
+			if current.parent.state == freezed && len(current.parent.childs) == 0 {
+				current.parent.state = disposing
+				close(current.parent.isOpened)
+			}
+		}
+		current.root.ready.Unlock()
+
+	}(newContext)
 
 	return newContext, nil
 }
 
-func (context *ctx) Opened() chan struct{} {
-	return context.opened
+// Context ...
+func (context *context) Context() chan struct{} {
+	return context.isOpened
 }
 
-func (context *ctx) recursiveSetChildsCreatingAllowed(value bool) {
-	context.Log(103, "recursiveSetChildsCreatingAllowed", "...")
-	for _, child := range context.childs {
-		child.recursiveSetChildsCreatingAllowed(value)
-	}
-	context.childsCreatingAllowed = value
-	context.Log(103, "recursiveSetChildsCreatingAllowed", "done")
+// Cancel ...
+func (current *context) Cancel() {
+	current.root.ready.Lock()
+	defer current.root.ready.Unlock()
+
+	current.freezeAllChildsAndSubchilds()
 }
 
-func (context *ctx) close() {
-	context.Log(105, "close", "...")
-	context.closedMutex.Lock()
-	defer context.closedMutex.Unlock()
+func (current *context) freezeAllChildsAndSubchilds() {
 
-	if !context.closed {
-		context.Log(105, "close", "channel closed")
-		close(context.opened)
-		context.closed = true
-	}
-	context.Log(105, "close", "done")
-}
-
-func (context *ctx) recursiveClosing() {
-	context.Log(103, "recursiveClosing", "...")
-	context.callOnCloseHandler()
-
-	childs := make(map[int64]*ctx)
-
-	for id, child := range context.childs {
-		childs[id] = child
-	}
-
-	for id, child := range childs {
-		child.recursiveClosing()
-		delete(context.childs, id)
-	}
-
-	context.Log(104, "childsWaitGroup", "...")
-	context.childsWaitGroup.Wait()
-	context.Log(104, "childsWaitGroup", "done")
-
-	context.close()
-
-	context.Log(104, "loopWaitGroup", "...")
-	context.loopWaitGroup.Wait()
-	context.Log(104, "loopWaitGroup", "done")
-
-	context.Log(103, "recursiveClosing", "done")
-}
-
-func (context *ctx) cancel() {
-	context.tree.closingAllowed.Lock()
-	defer context.tree.closingAllowed.Unlock()
-
-	{
-		context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed ...")
-		context.tree.changesAllowed.Lock()
-		context.recursiveSetChildsCreatingAllowed(false)
-		context.tree.changesAllowed.Unlock()
-		context.Log(102, "cancel", "recursiveSetChildsCreatingAllowed done")
-	}
-
-	{
-		context.Log(102, "cancel", "recursiveClosing ...")
-		context.recursiveClosing()
-		context.Log(102, "cancel", "recursiveClosing done")
-	}
-
-}
-
-func (context *ctx) Cancel() {
-	go func() {
-		context.cancel()
-	}()
-}
-
-// StartNewFor ...
-func (context *ctx) NewContextFor(instance ContextedInstance, componentName string, componentType string) (Context, error) {
-
-	// attach to parent new child
-	parent := context
-
-	context.tree.changesAllowed.Lock()
-	defer parent.tree.changesAllowed.Unlock()
-
-	parent.debuggerMutex.Lock()
-	debuggerNodePath := make([]DebugNode, len(parent.debuggerNodePath))
-	copy(debuggerNodePath, parent.debuggerNodePath)
-	newDebuggerNodePath := append(debuggerNodePath, DebugNode{ID: parent.nextChildID, ComponentName: componentName, ComponentType: componentType})
-	parent.debuggerMutex.Unlock()
-
-	newContext := &ctx{
-		id:                    parent.nextChildID,
-		parent:                parent,
-		debuggerNodePath:      newDebuggerNodePath,
-		childs:                make(map[int64]*ctx),
-		nextChildID:           0,
-		instance:              instance,
-		childsCreatingAllowed: parent.childsCreatingAllowed,
-		opened:                make(chan struct{}),
-		tree:                  parent.tree,
-		onBeforeClosing:       func(current Context) {},
-		closed:                false,
-	}
-
-	if parent.childsCreatingAllowed {
-		parent.childs[parent.nextChildID] = newContext
-		parent.nextChildID++
-		parent.childsWaitGroup.Add(1)
-		newContext.start()
-		return newContext, nil
-	}
-	return nil, &ParentContextAlreadyInClosingStateError{}
-}
-
-func (context *ctx) wait() {
-	context.Log(101, "waiting till childs finished")
-	context.childsWaitGroup.Wait()
-	context.Log(101, "waiting till loop finished")
-	context.loopWaitGroup.Wait()
-	context.Log(101, "waiting done")
-}
-
-func (context *ctx) Log(arguments ...interface{}) {
-
-	objects := make([]interface{}, 0)
-
-	objects = append(objects, arguments...)
-
-	context.log(objects)
-}
-
-func (context *ctx) log(objects []interface{}) {
-	context.debuggerMutex.Lock()
-	context.tree.debugger.Log(context.debuggerNodePath, objects)
-	context.debuggerMutex.Unlock()
-}
-
-func (context *ctx) start() {
-
-	context.loopWaitGroup.Add(1)
-
-	go func(ctx *ctx) {
-
-		ctx.Log(100, "started")
-
-		{ // wait till context execution would be finished, only after that you can dispose all context resources, otherwise it could try to create new child context on disposed resources
-			ctx.instance.Go(ctx)
-			ctx.Log(100, "finished")
+	if current.state == working {
+		current.state = freezed
+		for child := range current.childs {
+			child.freezeAllChildsAndSubchilds()
 		}
+	}
 
-		{ // panic on not closed childs
-			if len(ctx.childs) != 0 {
-				ctx.debuggerMutex.Lock()
-				node := ctx.debuggerNodePath[len(ctx.debuggerNodePath)-1]
-				panic(fmt.Sprintf("you tries to exit from context %v[%v] that have unclosed childs. Use context.Close() method, instead just exiting from goroutine!", node.ComponentType, node.ComponentName))
-			}
-		}
-
-		{ // childs WaitGroup decremented
-			if ctx.parent != nil {
-				ctx.parent.childsWaitGroup.Done()
-			}
-		}
-
-		{ // loop finished
-			ctx.loopWaitGroup.Done()
-		}
-
-	}(context)
-}
-
-func (context *ctx) SetOnBeforeClosing(handler func(current Context)) {
-	context.onBeforeClosingMutex.Lock()
-	defer context.onBeforeClosingMutex.Unlock()
-	context.onBeforeClosing = handler
-}
-
-func (context *ctx) callOnCloseHandler() {
-	context.onBeforeClosingMutex.Lock()
-	defer context.onBeforeClosingMutex.Unlock()
-	if context.onBeforeClosing != nil {
-		context.onBeforeClosing(context)
+	if current.state == freezed && len(current.childs) == 0 {
+		current.state = disposing
+		close(current.isOpened)
 	}
 }
