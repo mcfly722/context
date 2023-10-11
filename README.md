@@ -9,9 +9,7 @@ Unfortunately the standard golang [context package](https://github.com/golang/go
 To resolve this issue, this is another implementation of context pattern.<br>
 It waits till all child contexts will correctly closes (parent event loop would be available for servicing it childs). Only when all childs would be closed, then parent would exit to.
 
-### Documentation:
-
-[GoDoc](https://pkg.go.dev/github.com/mcfly722/context)
+### Documentation: [GoDoc](https://pkg.go.dev/github.com/mcfly722/context)
 
 ### How to use it:
 
