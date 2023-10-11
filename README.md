@@ -1,5 +1,5 @@
 # context
-![Version: version](https://img.shields.io/badge/version-v1.0.2-success.svg)
+![Version: version](https://img.shields.io/badge/version-v1.0.3-success.svg)
 ![Tests: tests](https://img.shields.io/badge/tests-✔6|✘0-success.svg)
 [![License: GPL3.0](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 <br>
