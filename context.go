@@ -1,6 +1,6 @@
 // Package implements graceful shutdown context tree for your goroutines.
 //
-// It means that parent context wouldn't close until all its child's doesn't close.
+// It means that parent context wouldn't finish until all its child's worked.
 //
 // # example:
 //
@@ -8,12 +8,12 @@
 //
 // root => child1 => child2 => child3
 //
-// and trying to close root.
+// and trying to finish root.
 //
-// All subchilds would be closed in reverse order (first - child3, then child2, child1, root).
-// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent would be closed before child, it will cause undefined behaviour or goroutine locking.
+// All subchilds will finish in reverse order (first - child3, then child2, child1, root).
+// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent will finishes before child, it will cause undefined behaviour or goroutine locking.
 //
-// Unfortunately, context from standard Go library does not guarantee this close order.
+// Unfortunately, context from standard Go library does not guarantee this closing order.
 //
 // See issue: https://github.com/golang/go/issues/51075
 //
@@ -29,14 +29,14 @@ import (
 // (see [ContextedInstance])
 type Context[M any] interface {
 
-	// Method creates new child context for instance what implements ContextedInstance interface
+	// Creates new child context for instance what implements ContextedInstance interface
 	NewContextFor(instance ContextedInstance[M]) (ChildContext[M], error)
 
-	// Method receives channel what could be used to understand when you can close your current context (all childs are already served and terminated).
+	// Channel that transmits control state messages from parent to child. When it closes, it means that child context should exit from Go function
 	Controller() chan M
 
-	// Method cancel current context and all childs according reverse order.
-	Cancel()
+	// Finish current context and all childs according reverse order.
+	Finish()
 
 	// Send control message
 	Send(message M) (err error)
@@ -83,9 +83,9 @@ func (parent *context[M]) NewContextFor(instance ContextedInstance[M]) (ChildCon
 
 	switch parent.state {
 	case freezed:
-		return nil, &CancelInProcessForFreezeError{}
+		return nil, &FinishInProcessForFreezeError{}
 	case disposing:
-		return nil, &CancelInProcessForDisposingError{}
+		return nil, &FinishInProcessForDisposingError{}
 	}
 
 	return newContextFor(parent, instance)
@@ -111,7 +111,7 @@ func newContextFor[M any](parent *context[M], instance ContextedInstance[M]) (*c
 		current.instance.Go(current)
 
 		if current.state != disposing {
-			panic(ExitFromContextWithoutCancelPanic)
+			panic(ExitFromContextWithoutFinishPanic)
 		}
 
 		// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
@@ -135,8 +135,8 @@ func (context *context[M]) Controller() chan M {
 	return context.controller
 }
 
-// Cancel ...
-func (current *context[M]) Cancel() {
+// Finish ...
+func (current *context[M]) Finish() {
 	current.root.ready.Lock()
 	defer current.root.ready.Unlock()
 
@@ -163,7 +163,7 @@ func (current *context[M]) Send(message M) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = &CancelInProcessForSendError{}
+			err = &FinishInProcessForSendError{}
 		}
 	}()
 

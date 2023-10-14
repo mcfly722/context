@@ -24,7 +24,7 @@ func (node *node) Go(current context.Context[any]) {
 loop:
 	for {
 		select {
-		case _, isOpened := <-current.Controller(): // this method returns context channel. If it closes, it means that we need to finish select loop
+		case _, isOpened := <-current.Controller(): // this method returns context channel. If it finished, it means that we need exit from select loop and function
 			if !isOpened {
 				break loop
 			}
@@ -33,7 +33,7 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("4. context '%v' closed\n", node.getName())
+	fmt.Printf("4. context '%v' finished\n", node.getName())
 }
 
 func Example() {
@@ -48,7 +48,7 @@ func Example() {
 	go func() {
 		time.Sleep(1 * time.Second)
 		fmt.Printf("3. one second pass\n")
-		rootContext.Cancel()
+		rootContext.Finish()
 	}()
 
 	rootContext.Wait()
@@ -58,9 +58,9 @@ func Example() {
 	// Output:
 	// 1. now waiting for 1 sec...
 	// 3. one second pass
-	// 4. context 'child3' closed
-	// 4. context 'child2' closed
-	// 4. context 'child1' closed
-	// 4. context 'root' closed
+	// 4. context 'child3' finished
+	// 4. context 'child2' finished
+	// 4. context 'child1' finished
+	// 4. context 'root' finished
 	// 5. end
 }

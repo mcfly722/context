@@ -73,8 +73,8 @@ func Test_SimpleTree3x3(t *testing.T) {
 
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		fmt.Println("Cancel")
-		rootContext.Cancel()
+		fmt.Println("Finish")
+		rootContext.Finish()
 	}()
 
 	rootContext.Wait()
@@ -92,8 +92,8 @@ func Test_Ladder(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		fmt.Println("Cancel")
-		rootContext.Cancel()
+		fmt.Println("Finish")
+		rootContext.Finish()
 	}()
 
 	rootContext.Wait()

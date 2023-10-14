@@ -3,7 +3,7 @@ package context
 // This interface should be implemented by your nodes.
 //
 // Module automatically starts Go(...) method with current Context and automatically waits till it ends.
-// You could not exit from this method without context cancelling (otherwise [ExitFromContextWithoutCancelPanic] occurs).
+// You could not exit from this method without context Finishling (otherwise [ExitFromContextWithoutFinishPanic] occurs).
 //
 // Example:
 //

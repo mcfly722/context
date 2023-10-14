@@ -61,15 +61,15 @@ func Test_FailCreateContextFromRootNode(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		fmt.Printf("4 - Canceling root context\n")
-		rootContext.Cancel()
+		fmt.Printf("4 - Finishing root context\n")
+		rootContext.Finish()
 
-		fmt.Printf("5 - trying to create new context from closed root context...\n")
+		fmt.Printf("5 - trying to create new context from finished root context...\n")
 
 		newChildNode := &childNode5{}
 		_, err := rootContext.NewContextFor(newChildNode)
 		if err != nil {
-			_, ok := err.(*context.CancelInProcessForFreezeError)
+			_, ok := err.(*context.FinishInProcessForFreezeError)
 			if ok {
 				fmt.Printf("6 - successfully catched error: %v\n", err)
 			} else {

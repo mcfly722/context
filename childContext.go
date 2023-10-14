@@ -10,6 +10,6 @@ type ChildContext[M any] interface {
 	// create new child context for instance what implements Instance interface
 	NewContextFor(instance ContextedInstance[M]) (ChildContext[M], error)
 
-	// cancel current context
-	Cancel()
+	// Finish current context
+	Finish()
 }
