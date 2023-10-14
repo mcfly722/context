@@ -27,16 +27,19 @@ import (
 // Instances of this interfaces sends to your node through Go() method.
 //
 // (see [ContextedInstance])
-type Context interface {
+type Context[M any] interface {
 
 	// Method creates new child context for instance what implements ContextedInstance interface
-	NewContextFor(instance ContextedInstance) (ChildContext, error)
+	NewContextFor(instance ContextedInstance[M]) (ChildContext[M], error)
 
 	// Method receives channel what could be used to understand when you can close your current context (all childs are already served and terminated).
-	Context() chan struct{}
+	Controller() chan M
 
 	// Method cancel current context and all childs according reverse order.
 	Cancel()
+
+	// Send control message
+	Send(message M) (err error)
 }
 
 type contextState int
@@ -47,33 +50,33 @@ const (
 	disposing contextState = 2
 )
 
-type context struct {
-	parent   *context
-	childs   map[*context]*context
-	instance ContextedInstance
-	state    contextState
-	isOpened chan struct{}
-	root     *root
+type context[M any] struct {
+	parent     *context[M]
+	childs     map[*context[M]]*context[M]
+	instance   ContextedInstance[M]
+	state      contextState
+	controller chan M
+	root       *root
 }
 
 type root struct {
 	ready sync.Mutex
 }
 
-func newEmptyContext() *context {
+func newEmptyContext[M any]() *context[M] {
 
-	return &context{
-		parent:   &context{},
-		childs:   map[*context]*context{},
-		instance: nil,
-		state:    working,
-		isOpened: make(chan struct{}),
-		root:     &root{},
+	return &context[M]{
+		parent:     &context[M]{},
+		childs:     map[*context[M]]*context[M]{},
+		instance:   nil,
+		state:      working,
+		controller: make(chan M),
+		root:       &root{},
 	}
 }
 
 // NewContextFor ...
-func (parent *context) NewContextFor(instance ContextedInstance) (ChildContext, error) {
+func (parent *context[M]) NewContextFor(instance ContextedInstance[M]) (ChildContext[M], error) {
 
 	parent.root.ready.Lock()
 	defer parent.root.ready.Unlock()
@@ -88,21 +91,21 @@ func (parent *context) NewContextFor(instance ContextedInstance) (ChildContext, 
 	return newContextFor(parent, instance)
 }
 
-func newContextFor(parent *context, instance ContextedInstance) (*context, error) {
+func newContextFor[M any](parent *context[M], instance ContextedInstance[M]) (*context[M], error) {
 
-	newContext := &context{
-		parent:   parent,
-		childs:   map[*context]*context{},
-		instance: instance,
-		state:    working,
-		isOpened: make(chan struct{}),
-		root:     parent.root,
+	newContext := &context[M]{
+		parent:     parent,
+		childs:     map[*context[M]]*context[M]{},
+		instance:   instance,
+		state:      working,
+		controller: make(chan M),
+		root:       parent.root,
 	}
 
 	parent.childs[newContext] = newContext
 
 	// Start new Context
-	go func(current *context) {
+	go func(current *context[M]) {
 
 		// execure user context select {...}
 		current.instance.Go(current)
@@ -117,7 +120,7 @@ func newContextFor(parent *context, instance ContextedInstance) (*context, error
 			delete(current.parent.childs, current)
 			if current.parent.state == freezed && len(current.parent.childs) == 0 {
 				current.parent.state = disposing
-				close(current.parent.isOpened)
+				close(current.parent.controller)
 			}
 		}
 		current.root.ready.Unlock()
@@ -128,19 +131,19 @@ func newContextFor(parent *context, instance ContextedInstance) (*context, error
 }
 
 // Context ...
-func (context *context) Context() chan struct{} {
-	return context.isOpened
+func (context *context[M]) Controller() chan M {
+	return context.controller
 }
 
 // Cancel ...
-func (current *context) Cancel() {
+func (current *context[M]) Cancel() {
 	current.root.ready.Lock()
 	defer current.root.ready.Unlock()
 
 	current.freezeAllChildsAndSubchilds()
 }
 
-func (current *context) freezeAllChildsAndSubchilds() {
+func (current *context[M]) freezeAllChildsAndSubchilds() {
 
 	if current.state == working {
 		current.state = freezed
@@ -151,6 +154,20 @@ func (current *context) freezeAllChildsAndSubchilds() {
 
 	if current.state == freezed && len(current.childs) == 0 {
 		current.state = disposing
-		close(current.isOpened)
+		close(current.controller)
 	}
+}
+
+// Send controller message to context
+func (current *context[M]) Send(message M) (err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = &CancelInProcessForSendError{}
+		}
+	}()
+
+	current.controller <- message
+
+	return nil
 }

@@ -22,13 +22,13 @@ func newNode2(path string, i int) *node2 {
 	}
 }
 
-func (node *node2) Go(current context.Context) {
+func (node *node2) Go(current context.Context[any]) {
 loop:
 	for {
 		select {
 		case <-time.After(time.Duration(rand.Intn(100)) * time.Microsecond):
 			current.Cancel()
-		case _, isOpened := <-current.Context():
+		case _, isOpened := <-current.Controller():
 			if !isOpened {
 				break loop
 			}
@@ -39,7 +39,7 @@ loop:
 	}
 }
 
-func (parent *node2) simpleTree2(context context.ChildContext, width int, height int) {
+func (parent *node2) simpleTree2(context context.ChildContext[any], width int, height int) {
 	if height > 1 {
 
 		for i := 0; i < width; i++ {
@@ -68,7 +68,7 @@ func Test_Race_RandomSimpleTree3x3(t *testing.T) {
 
 		rootNode := newNode2("", 0)
 
-		rootContext := context.NewRootContext(rootNode)
+		rootContext := context.NewRootContext[any](rootNode)
 
 		rootNode.simpleTree2(rootContext, 3, 3)
 

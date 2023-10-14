@@ -26,13 +26,13 @@ func newNode1(name string) *node1 {
 	}
 }
 
-func (node *node1) Go(current context.Context) {
+func (node *node1) Go(current context.Context[any]) {
 
 	fmt.Printf("go:             %v started\n", node.getName())
 loop:
 	for {
 		select {
-		case _, isOpened := <-current.Context():
+		case _, isOpened := <-current.Controller():
 			if !isOpened {
 				break loop
 			}
@@ -44,7 +44,7 @@ loop:
 	fmt.Printf("%v finished\n", node.getName())
 }
 
-func (parent *node1) simpleTree(context context.ChildContext, width int, height int) {
+func (parent *node1) simpleTree(context context.ChildContext[any], width int, height int) {
 
 	fmt.Printf("%v configured\n", parent.getName())
 
@@ -65,7 +65,7 @@ func Test_SimpleTree3x3(t *testing.T) {
 
 	rootNode := newNode1("root")
 
-	rootContext := context.NewRootContext(rootNode)
+	rootContext := context.NewRootContext[any](rootNode)
 
 	fmt.Printf("root context created Node=%v\n", rootNode.getName())
 
@@ -86,7 +86,7 @@ func Test_Ladder(t *testing.T) {
 
 	rootNode := newNode1("root")
 
-	rootContext := context.NewRootContext(rootNode)
+	rootContext := context.NewRootContext[any](rootNode)
 
 	rootNode.simpleTree(rootContext, 1, 20)
 

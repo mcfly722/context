@@ -8,10 +8,10 @@ import (
 )
 
 type node4 struct {
-	cancel chan context.ChildContext
+	cancel chan context.ChildContext[any]
 }
 
-func (node *node4) Go(current context.Context) {
+func (node *node4) Go(current context.Context[any]) {
 
 	fmt.Printf("go: waiting for root context\n")
 	rootContext := <-node.cancel
@@ -40,11 +40,11 @@ func (node *node4) Go(current context.Context) {
 func Test_NewInstanceDuringCancel(t *testing.T) {
 
 	rootNode := &node4{
-		cancel: make(chan context.ChildContext),
+		cancel: make(chan context.ChildContext[any]),
 	}
 
 	fmt.Printf("1 - creating new context \n")
-	rootContext := context.NewRootContext(rootNode)
+	rootContext := context.NewRootContext[any](rootNode)
 
 	fmt.Printf("2 - send rootContext to node cancel channel\n")
 	rootNode.cancel <- rootContext

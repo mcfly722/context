@@ -12,13 +12,13 @@ package context
 //		loop:
 //		for {
 //			select {
-//			case _, isOpened := <-current.Context():
+//			case _, isOpened := <-current.Controller():
 //				if !isOpened {
 //					break loop
 //				}
 //			}
 //		}
 //	}
-type ContextedInstance interface {
-	Go(current Context)
+type ContextedInstance[M any] interface {
+	Go(current Context[M])
 }

@@ -6,6 +6,12 @@ func (err *CancelInProcessForFreezeError) Error() string {
 	return "Cancel in process. Current context state=freeze. You cannot bind new child context during closing parent context."
 }
 
+type CancelInProcessForSendError struct{}
+
+func (err *CancelInProcessForSendError) Error() string {
+	return "Could not send any control messages to closing context. Just skip this error."
+}
+
 type CancelInProcessForDisposingError struct{}
 
 func (err *CancelInProcessForDisposingError) Error() string {

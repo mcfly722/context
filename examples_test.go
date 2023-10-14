@@ -20,11 +20,11 @@ func (node *node) getName() string {
 }
 
 // this method node should implement as Goroutine loop
-func (node *node) Go(current context.Context) {
+func (node *node) Go(current context.Context[any]) {
 loop:
 	for {
 		select {
-		case _, isOpened := <-current.Context(): // this method returns context channel. If it closes, it means that we need to finish select loop
+		case _, isOpened := <-current.Controller(): // this method returns context channel. If it closes, it means that we need to finish select loop
 			if !isOpened {
 				break loop
 			}
@@ -38,7 +38,7 @@ loop:
 
 func Example() {
 
-	rootContext := context.NewRootContext(newNode("root"))
+	rootContext := context.NewRootContext[any](newNode("root"))
 	child1Context, _ := rootContext.NewContextFor(newNode("child1"))
 	child2Context, _ := child1Context.NewContextFor(newNode("child2"))
 	child2Context.NewContextFor(newNode("child3"))

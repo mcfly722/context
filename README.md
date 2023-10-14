@@ -1,5 +1,5 @@
 # context
-![Version: version](https://img.shields.io/badge/version-v1.0.4-success.svg)
+![Version: version](https://img.shields.io/badge/version-v1.0.5-success.svg)
 ![Tests: tests](https://img.shields.io/badge/tests-✔6|✘0-success.svg)
 [![License: GPL3.0](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 <br>
@@ -33,7 +33,7 @@ func (node *node) Go(current context.Context) {
 loop:
 	for {
 		select {
-		case _, isOpened := <-current.Context(): // this method returns context channel. If it closes, it means that we need to finish select loop
+		case _, isOpened := <-current.Controller(): // this method returns context channel. If it closes, it means that we need to finish select loop
 			if !isOpened {
 				break loop
 			}

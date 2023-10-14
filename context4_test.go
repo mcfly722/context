@@ -11,11 +11,11 @@ import (
 type childNode5 struct{}
 type rootNode5 struct{}
 
-func (node *childNode5) Go(current context.Context) {
+func (node *childNode5) Go(current context.Context[any]) {
 loop:
 	for {
 		select {
-		case _, isOpened := <-current.Context():
+		case _, isOpened := <-current.Controller():
 			if !isOpened {
 				break loop
 			}
@@ -29,11 +29,11 @@ loop:
 	fmt.Printf("go:     childNode finished\n")
 }
 
-func (node *rootNode5) Go(current context.Context) {
+func (node *rootNode5) Go(current context.Context[any]) {
 loop:
 	for {
 		select {
-		case _, isOpened := <-current.Context():
+		case _, isOpened := <-current.Controller():
 			if !isOpened {
 				break loop
 			}
@@ -51,7 +51,7 @@ func Test_FailCreateContextFromRootNode(t *testing.T) {
 	childNode := &childNode5{}
 
 	fmt.Printf("1 - creating new root context\n")
-	rootContext := context.NewRootContext(rootNode)
+	rootContext := context.NewRootContext[any](rootNode)
 
 	fmt.Printf("2 - creating child context\n")
 	_, err := rootContext.NewContextFor(childNode)
