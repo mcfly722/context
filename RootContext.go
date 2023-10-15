@@ -4,14 +4,14 @@ package context
 type RootContext[M any] interface {
 
 	// Creates new Context from your instance what implements [ContextedInstance] interface.
-	// If current root context is already in closing state it returns [FinishInProcessForFreezeError] or [FinishInProcessForDisposingError]
+	// If current root context is already in closing state it returns [ClosingIsInProcessForFreezeError] or [ClosingIsInProcessForDisposingError]
 	NewContextFor(instance ContextedInstance[M]) (ChildContext[M], error)
 
-	// Waits till current root context would be Finished.
+	// Waits till current root context would be Closeed.
 	Wait()
 
-	// Finish current root context and all childs according reverse order.
-	Finish()
+	// Close current root context and all childs according reverse order.
+	Close()
 
 	// Send control message
 	Send(message M) error
@@ -45,9 +45,9 @@ func (root *rootContext[M]) Wait() {
 	<-root.controller
 }
 
-// Finish ...
-func (root *rootContext[M]) Finish() {
-	root.context.Finish()
+// Close ...
+func (root *rootContext[M]) Close() {
+	root.context.Close()
 }
 
 func (root *rootContext[M]) Go(current Context[M]) {

@@ -26,7 +26,7 @@ loop:
 	}
 	fmt.Printf("go:     childNode disposing for 300ms\n")
 	time.Sleep(300 * time.Millisecond)
-	fmt.Printf("go:     childNode finished\n")
+	fmt.Printf("go:     childNode closed\n")
 }
 
 func (node *rootNode5) Go(current context.Context[any]) {
@@ -42,7 +42,7 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("go:     rootNode finished\n")
+	fmt.Printf("go:     rootNode closed\n")
 }
 
 func Test_FailCreateContextFromRootNode(t *testing.T) {
@@ -61,15 +61,15 @@ func Test_FailCreateContextFromRootNode(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		fmt.Printf("4 - Finishing root context\n")
-		rootContext.Finish()
+		fmt.Printf("4 - Closeing root context\n")
+		rootContext.Close()
 
-		fmt.Printf("5 - trying to create new context from finished root context...\n")
+		fmt.Printf("5 - trying to create new context from closed root context...\n")
 
 		newChildNode := &childNode5{}
 		_, err := rootContext.NewContextFor(newChildNode)
 		if err != nil {
-			_, ok := err.(*context.FinishInProcessForFreezeError)
+			_, ok := err.(*context.ClosingIsInProcessForFreezeError)
 			if ok {
 				fmt.Printf("6 - successfully catched error: %v\n", err)
 			} else {
@@ -83,5 +83,5 @@ func Test_FailCreateContextFromRootNode(t *testing.T) {
 	fmt.Printf("3 - Wait\n")
 	rootContext.Wait()
 
-	fmt.Printf("7 - test finished\n")
+	fmt.Printf("7 - test closed\n")
 }

@@ -1,44 +1,43 @@
-// Package implements graceful shutdown context tree for your goroutines.
+// Package implements a graceful shutdown context tree for your goroutines.
 //
-// It means that parent context wouldn't finish until all its child's worked.
+// It means that parent context wouldn't close until all its children's worked.
 //
 // # example:
 //
-// You creating context tree:
+// You are creating a context tree:
 //
 // root => child1 => child2 => child3
 //
-// and trying to finish root.
+// and trying to close the root.
 //
-// All subchilds will finish in reverse order (first - child3, then child2, child1, root).
-// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent will finishes before child, it will cause undefined behaviour or goroutine locking.
+// All subchilds will close in reverse order (first - child3, then child2, child1, root).
+// This closing order is absolutely essential because the child context could use some parent resources or send some signals to the parent. If a parent closes before the child, it will cause undefined behavior or goroutine locking.
 //
-// Unfortunately, context from standard Go library does not guarantee this closing order.
-//
+// Unfortunately, context from the standard Go library does not guarantee this closing order.
 // See issue: https://github.com/golang/go/issues/51075
 //
-// This module resolves this problem and guarantee correct closing order.
+// This module resolves this problem and guarantees a correct closing order.
 package context
 
 import (
 	"sync"
 )
 
-// Instances of this interfaces sends to your node through Go() method.
+// Instances of this interface are sent to your node through the Go() method.
 //
 // (see [ContextedInstance])
 type Context[M any] interface {
 
-	// Creates new child context for instance what implements ContextedInstance interface
+	// creates a new child context, for instance, what implements ContextedInstance interface
 	NewContextFor(instance ContextedInstance[M]) (ChildContext[M], error)
 
-	// Channel that transmits control state messages from parent to child. When it closes, it means that child context should exit from Go function
+	// Channel that transmits control state messages from parent to child. When it closes, it means that the child context should exit from the Go function.
 	Controller() chan M
 
-	// Finish current context and all childs according reverse order.
-	Finish()
+	// Close the current context and all children in reverse order.
+	Close()
 
-	// Send control message
+	// Send a control message.
 	Send(message M) (err error)
 }
 
@@ -83,9 +82,9 @@ func (parent *context[M]) NewContextFor(instance ContextedInstance[M]) (ChildCon
 
 	switch parent.state {
 	case freezed:
-		return nil, &FinishInProcessForFreezeError{}
+		return nil, &ClosingIsInProcessForFreezeError{}
 	case disposing:
-		return nil, &FinishInProcessForDisposingError{}
+		return nil, &ClosingIsInProcessForDisposingError{}
 	}
 
 	return newContextFor(parent, instance)
@@ -107,14 +106,14 @@ func newContextFor[M any](parent *context[M], instance ContextedInstance[M]) (*c
 	// Start new Context
 	go func(current *context[M]) {
 
-		// execure user context select {...}
+		// start user context select {...} loop
 		current.instance.Go(current)
 
 		if current.state != disposing {
-			panic(ExitFromContextWithoutFinishPanic)
+			panic(ExitFromContextWithoutClosePanic)
 		}
 
-		// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
+		// remove the node from parent children, and if the parent is frozen and empty, initiate its disposal
 		current.root.ready.Lock()
 		if current.parent != nil {
 			delete(current.parent.childs, current)
@@ -135,8 +134,8 @@ func (context *context[M]) Controller() chan M {
 	return context.controller
 }
 
-// Finish ...
-func (current *context[M]) Finish() {
+// Close ...
+func (current *context[M]) Close() {
 	current.root.ready.Lock()
 	defer current.root.ready.Unlock()
 
@@ -158,12 +157,12 @@ func (current *context[M]) freezeAllChildsAndSubchilds() {
 	}
 }
 
-// Send controller message to context
+// Send a message to the context.
 func (current *context[M]) Send(message M) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = &FinishInProcessForSendError{}
+			err = &ClosingIsInProcessForSendError{}
 		}
 	}()
 

@@ -19,12 +19,12 @@ func (node *node) getName() string {
 	return node.name
 }
 
-// this method node should implement as Goroutine loop
+// this method node should be implemented as Goroutine loop
 func (node *node) Go(current context.Context[any]) {
 loop:
 	for {
 		select {
-		case _, isOpened := <-current.Controller(): // this method returns context channel. If it finished, it means that we need exit from select loop and function
+		case _, isOpened := <-current.Controller(): // This method returns a context controller channel. If it is closed, it means that we need to exit the select loop and function.
 			if !isOpened {
 				break loop
 			}
@@ -48,7 +48,7 @@ func Example() {
 	go func() {
 		time.Sleep(1 * time.Second)
 		fmt.Printf("3. one second pass\n")
-		rootContext.Finish()
+		rootContext.Close()
 	}()
 
 	rootContext.Wait()

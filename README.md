@@ -3,27 +3,27 @@
 ![Tests: tests](https://img.shields.io/badge/tests-✔6|✘0-success.svg)
 [![License: GPL3.0](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 <br>
-Unfortunately the standard golang [context package](https://github.com/golang/go/tree/master/src/context) does not control closing order of child contexts ([issue #51075](https://github.com/golang/go/issues/51075)).<br>
-(parent context could exit earlier than his child, and in this case you could get unpredicted execution behaviour when you try to use some parent resources which is already closed)
+Unfortunately, the standard golang [context package](https://github.com/golang/go/tree/master/src/context) does not control the closing order of child contexts ([issue #51075](https://github.com/golang/go/issues/51075)).<br>
+(the parent context could exit earlier than his child, and in this case, you could get unpredicted execution behavior when you try to use some parent resources that are already closed)
 
 To resolve this issue, here is another implementation of this context pattern.<br>
-It waits till all child contexts will correctly closes (parent event loop would be available for servicing it childs). Only when all childs would be closed, then parent would exit to.
+It waits until all child contexts correctly close (parent event loop would be available for servicing their children). Only when all children would be closed parents will exits too.
 
 ### Documentation: [GoDoc](https://pkg.go.dev/github.com/mcfly722/context)
 
 ### How to use it:
 
-Full example you can find here: [examples_test.go](https://github.com/mcfly722/goPackages/blob/main/context/examples_test.go)
+A full example can be found here: [examples_test.go](https://github.com/mcfly722/goPackages/blob/main/context/examples_test.go)
 
 
-#### 1. Add new context import to your project
+#### 1. Add a new context import to your project:
 ```
 import (
 	context "github.com/mcfly722/context"
 )
 ```
 #### 2. Implement context.ContextedInstance interface with your node
-Your node should contains <b>Go(..)</b> method:
+Your node should contain <b>Go(..)</b> method:
 ```
 type node struct {
 	name: string,
@@ -56,11 +56,11 @@ node3 := &node{name : "3"}
 ```
 ctx0 := context.NewRootContext(node0)
 ```
-#### 4. Now you can inherit from root context and create childs and subchilds contexts:
+#### 4. Now you can inherit from the root context and create child and subchild contexts:
 ```
 ctx1, err := ctx0.NewContextFor(node1)
 if err != nil {
-	// child context does not created successfully, possibly parent is in closing state, you need just exit
+	// child context is not created successfully, possibly the parent is in a closing state, you just need to exit
 } else {
 	// child context created successfully
 }
@@ -77,25 +77,24 @@ ctx3, err := ctx2.NewContextFor(node3)
 ```
 ctx0.Close()
 ```
-It would close all contexts in reverse order 3->2->1->root.
+It would close all contexts in reverse order: 3->2->1->root.
 
 ### Restrictions
- 1. Do not exit from your context goroutine without checking that *current.Context()* channel is closed. It is potential lock or race, and this library restricts it (panic occurs especially to exclude this code mistake).<br>
- 2. Always check NewContextFor(...) error. Parent could be in closing state, it this case child would not be created.<br>
+ 1. Do not exit from your context goroutine without checking that *current.Context()* channel is closed. It is a potential lock or race, and this library restricts it (panic occurs especially to exclude this code mistake).<br>
+ 2. Always check NewContextFor(...) error. A parent could be in a closed state; in this case, a child would not be created.<br>
 
 ### Common questions
- 1. I want wait till child context will be closed. Where is <b>context.Wait()</b>?<br>
- <b>context.Wait()</b> is a race condition potential mistake. You send close to child and wait in parent, but childs at this moment do not know anything about closing. It continues to send data to parent through channels. Parent blocked, it waits with <b>contenxt.Wait()</b>. Child also blocked on channel send. It is full dead block.
- 2. Why <b>rootContext.Wait()</b> exists?<br>
- <b>rootContext</b> has its own empty goroutine loop without any send/receive, so, deadblock from scenario 3 is not possible.
- 3. Where is '<b>Deadlines</b>','<b>Timeouts</b>','<b>Values</b>' like in original context?<br>
+ 1. I want to wait until child context is closed. Where is <b>context.Wait()</b>?<br>
+ <b>context.Wait()</b> is a race condition potential mistake. You send close to the child and wait for the parent, but children at this moment do not know anything about closing. It continues to send data to parents through channels. Parent blocked, it waits with <b>contenxt.Wait()</b>. The child was also blocked on channel sending. It is a full dead block.
+ 2. Why does <b>rootContext.Wait()</b> exist?<br>
+ <b>rootContext</b> has its own empty goroutine loop without any send or receive, so deadblock from scenario 3 is not possible.
+ 3. Where is '<b>Deadlines</b>','<b>Timeouts</b>','<b>Values</b>' like in the original context?<br>
 <b>It's all sugar.</b><br>
-This timeouts/deadlines you can implement in your select loop (see: [<-time.After(...)](https://pkg.go.dev/time#After) or [<-time.Tick(...)](https://pkg.go.dev/time#Tick))<br>
-For values use constructor function with parameters.<br>
+This timeout or deadlines you can implement in your select loop (see: [<-time.After(...)](https://pkg.go.dev/time#After) or [<-time.Tick(...)](https://pkg.go.dev/time#Tick))<br>
+For values, use the constructor function with parameters.<br>
 
 ### By the way
-My goal here is to simplify this not trivial hierarchical multi thread pattern as much as possible without any compromises.<br>
-It main responsibility - provide safety sequenced closing through parent/child hierarchy (graceful shutdown). and nothing more unnecessary!<br>
-I hope my efforts are not in vain, and I would be glad to any recommendations and suggestions.<br>
+My goal here is to simplify this not-trivial hierarchical multi-threaded pattern as much as possible without any compromises.<br>
+Its main responsibility is to provide safety-sequenced closing through parent-child hierarchy (graceful shutdown). and nothing more is unnecessary.<br>
 <br>
-McFly.
+Serj.

@@ -41,7 +41,7 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("%v finished\n", node.getName())
+	fmt.Printf("%v closed\n", node.getName())
 }
 
 func (parent *node1) simpleTree(context context.ChildContext[any], width int, height int) {
@@ -73,8 +73,8 @@ func Test_SimpleTree3x3(t *testing.T) {
 
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		fmt.Println("Finish")
-		rootContext.Finish()
+		fmt.Println("Close")
+		rootContext.Close()
 	}()
 
 	rootContext.Wait()
@@ -92,8 +92,8 @@ func Test_Ladder(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		fmt.Println("Finish")
-		rootContext.Finish()
+		fmt.Println("Close")
+		rootContext.Close()
 	}()
 
 	rootContext.Wait()
