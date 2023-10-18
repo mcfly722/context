@@ -8,28 +8,28 @@ import (
 )
 
 type node4 struct {
-	cancel chan context.ChildContext
+	close chan context.ChildContext
 }
 
 func (node *node4) Go(current context.Context) {
 
 	fmt.Printf("go: waiting for root context\n")
-	rootContext := <-node.cancel
+	rootContext := <-node.close
 
 	fmt.Printf("go: root context obtained\n")
 
 	newNode := &node4{}
 
-	fmt.Printf("go: cancel context\n")
-	current.Cancel()
+	fmt.Printf("go: close context\n")
+	current.Close()
 
 	fmt.Printf("go: creating new SubContext\n")
 	_, err := current.NewContextFor(newNode)
 	if err != nil {
-		_, ok := err.(*context.CancelInProcessForDisposingError)
+		_, ok := err.(*context.ClosingIsInProcessForDisposingError)
 		if ok {
 			fmt.Printf("go: successfully catched error: %v\n", err)
-			rootContext.Cancel()
+			rootContext.Close()
 		} else {
 			panic("uncatched error")
 		}
@@ -37,17 +37,17 @@ func (node *node4) Go(current context.Context) {
 	}
 }
 
-func Test_NewInstanceDuringCancel(t *testing.T) {
+func Test_NewInstanceDuringClosing(t *testing.T) {
 
 	rootNode := &node4{
-		cancel: make(chan context.ChildContext),
+		close: make(chan context.ChildContext),
 	}
 
 	fmt.Printf("1 - creating new context \n")
 	rootContext := context.NewRootContext(rootNode)
 
-	fmt.Printf("2 - send rootContext to node cancel channel\n")
-	rootNode.cancel <- rootContext
+	fmt.Printf("2 - send rootContext to node close channel\n")
+	rootNode.close <- rootContext
 
 	fmt.Printf("3 - Wait\n")
 	rootContext.Wait()

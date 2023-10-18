@@ -3,15 +3,15 @@ package context
 // The RootContext interface is returned by the [NewRootContext] function.
 type RootContext interface {
 
-	// Method creates new Context from your instance what implements [ContextedInstance] interface.
-	// If current root context is already in closing state it returns [CancelInProcessForFreezeError] or [CancelInProcessForDisposingError]
+	// Creates new Context from your instance what implements [ContextedInstance] interface.
+	// If current root context is already in closing state it returns [ClosingIsInProcessForFreezeError] or [ClosingIsInProcessForDisposingError]
 	NewContextFor(instance ContextedInstance) (ChildContext, error)
 
-	// Method waits till current root context would be canceled.
+	// Waits till current root context would be Closeed.
 	Wait()
 
-	// Method cancel current root context and all childs according reverse order.
-	Cancel()
+	// Close current root context and all childs according reverse order.
+	Close()
 }
 
 type rootContext struct {
@@ -42,9 +42,9 @@ func (root *rootContext) Wait() {
 	<-root.done
 }
 
-// Cancel ...
-func (root *rootContext) Cancel() {
-	root.context.Cancel()
+// Close ...
+func (root *rootContext) Close() {
+	root.context.Close()
 }
 
 func (root *rootContext) Go(current Context) {

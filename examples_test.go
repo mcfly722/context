@@ -48,7 +48,7 @@ func Example() {
 	go func() {
 		time.Sleep(1 * time.Second)
 		fmt.Printf("3. one second pass\n")
-		rootContext.Cancel()
+		rootContext.Close()
 	}()
 
 	rootContext.Wait()

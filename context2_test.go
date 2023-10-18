@@ -27,7 +27,7 @@ loop:
 	for {
 		select {
 		case <-time.After(time.Duration(rand.Intn(100)) * time.Microsecond):
-			current.Cancel()
+			current.Close()
 		case _, isOpened := <-current.Context():
 			if !isOpened {
 				break loop
@@ -73,7 +73,7 @@ func Test_Race_RandomSimpleTree3x3(t *testing.T) {
 		rootNode.simpleTree2(rootContext, 3, 3)
 
 		go func() {
-			rootContext.Cancel()
+			rootContext.Close()
 		}()
 
 		rootContext.Wait()

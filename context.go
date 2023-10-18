@@ -1,42 +1,41 @@
-// Package implements graceful shutdown context tree for your goroutines.
+// Package implements a graceful shutdown context tree for your goroutines.
 //
-// It means that parent context wouldn't close until all its child's doesn't close.
+// It means that parent context wouldn't close until all its children's worked.
 //
 // # example:
 //
-// You creating context tree:
+// You are creating a context tree:
 //
 // root => child1 => child2 => child3
 //
-// and trying to close root.
+// and trying to close the root.
 //
-// All subchilds would be closed in reverse order (first - child3, then child2, child1, root).
-// This closing order is absolutely essential, because child context could use some parent resources or send some signals to parent. If parent would be closed before child, it will cause undefined behaviour or goroutine locking.
+// All subchilds will close in reverse order (first - child3, then child2, child1, root).
+// This closing order is absolutely essential because the child context could use some parent resources or send some signals to the parent. If a parent closes before the child, it will cause undefined behavior or goroutine locking.
 //
-// Unfortunately, context from standard Go library does not guarantee this close order.
-//
+// Unfortunately, context from the standard Go library does not guarantee this closing order.
 // See issue: https://github.com/golang/go/issues/51075
 //
-// This module resolves this problem and guarantee correct closing order.
+// This module resolves this problem and guarantees a correct closing order.
 package context
 
 import (
 	"sync"
 )
 
-// Instances of this interfaces sends to your node through Go() method.
+// Instances of this interface are sent to your node through the Go() method.
 //
 // (see [ContextedInstance])
 type Context interface {
 
-	// Method creates new child context for instance what implements ContextedInstance interface
+	// creates a new child context, for instance, what implements ContextedInstance interface
 	NewContextFor(instance ContextedInstance) (ChildContext, error)
 
-	// Method receives channel what could be used to understand when you can close your current context (all childs are already served and terminated).
+	// When this channel closes, it means that the child context should exit from the Go function.
 	Context() chan struct{}
 
-	// Method cancel current context and all childs according reverse order.
-	Cancel()
+	// Close the current context and all children in reverse order.
+	Close()
 }
 
 type contextState int
@@ -80,9 +79,9 @@ func (parent *context) NewContextFor(instance ContextedInstance) (ChildContext, 
 
 	switch parent.state {
 	case freezed:
-		return nil, &CancelInProcessForFreezeError{}
+		return nil, &ClosingIsInProcessForFreezeError{}
 	case disposing:
-		return nil, &CancelInProcessForDisposingError{}
+		return nil, &ClosingIsInProcessForDisposingError{}
 	}
 
 	return newContextFor(parent, instance)
@@ -108,7 +107,7 @@ func newContextFor(parent *context, instance ContextedInstance) (*context, error
 		current.instance.Go(current)
 
 		if current.state != disposing {
-			panic(ExitFromContextWithoutCancelPanic)
+			panic(ExitFromContextWithoutClosePanic)
 		}
 
 		// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
@@ -132,8 +131,8 @@ func (context *context) Context() chan struct{} {
 	return context.isOpened
 }
 
-// Cancel ...
-func (current *context) Cancel() {
+// Close ...
+func (current *context) Close() {
 	current.root.ready.Lock()
 	defer current.root.ready.Unlock()
 
