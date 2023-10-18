@@ -36,9 +36,6 @@ type Context[M any] interface {
 
 	// Close the current context and all children in reverse order.
 	Close()
-
-	// Send a control message.
-	Send(message M) (err error)
 }
 
 type contextState int
@@ -56,6 +53,8 @@ type context[M any] struct {
 	state      contextState
 	controller chan M
 	root       *root
+
+	//controllerReady sync.Mutex // this mutex is essential to resolve runtime.closechan() and runtime.chansend() race. Unfortunately this two runtime functions are not thread safe (issue #30372)
 }
 
 type root struct {
@@ -119,7 +118,7 @@ func newContextFor[M any](parent *context[M], instance ContextedInstance[M]) (*c
 			delete(current.parent.childs, current)
 			if current.parent.state == freezed && len(current.parent.childs) == 0 {
 				current.parent.state = disposing
-				close(current.parent.controller)
+				current.parent.closeControllerChannel() // instead close(current.parent.controller)
 			}
 		}
 		current.root.ready.Unlock()
@@ -132,6 +131,12 @@ func newContextFor[M any](parent *context[M], instance ContextedInstance[M]) (*c
 // Context ...
 func (context *context[M]) Controller() chan M {
 	return context.controller
+}
+
+func (context *context[M]) closeControllerChannel() {
+	//context.controllerReady.Lock()
+	close(context.controller)
+	//context.controllerReady.Unlock()
 }
 
 // Close ...
@@ -153,12 +158,16 @@ func (current *context[M]) freezeAllChildsAndSubchilds() {
 
 	if current.state == freezed && len(current.childs) == 0 {
 		current.state = disposing
-		close(current.controller)
+		current.closeControllerChannel() // instead close(current.controller)
+
 	}
 }
 
 // Send a message to the context.
 func (current *context[M]) Send(message M) (err error) {
+
+	//current.controllerReady.Lock()
+	//defer current.controllerReady.Unlock()
 
 	defer func() {
 		if r := recover(); r != nil {

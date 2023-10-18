@@ -18,17 +18,17 @@ type RootContext[M any] interface {
 }
 
 type rootContext[M any] struct {
-	instance   ContextedInstance[M]
-	context    Context[M]
-	controller chan M
+	instance ContextedInstance[M]
+	context  ChildContext[M]
+	done     chan struct{}
 }
 
 // NewRootContext function generates and starts new root context
 func NewRootContext[M any](instance ContextedInstance[M]) RootContext[M] {
 
 	root := &rootContext[M]{
-		instance:   instance,
-		controller: make(chan M),
+		instance: instance,
+		done:     make(chan struct{}),
 	}
 
 	emptyContext := newEmptyContext[M]()
@@ -42,7 +42,7 @@ func NewRootContext[M any](instance ContextedInstance[M]) RootContext[M] {
 
 // Wait ...
 func (root *rootContext[M]) Wait() {
-	<-root.controller
+	<-root.done
 }
 
 // Close ...
@@ -52,7 +52,7 @@ func (root *rootContext[M]) Close() {
 
 func (root *rootContext[M]) Go(current Context[M]) {
 	root.instance.Go(current)
-	close(root.controller)
+	close(root.done)
 }
 
 // This function uses to generate new child context from root or other child context

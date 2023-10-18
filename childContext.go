@@ -12,4 +12,7 @@ type ChildContext[M any] interface {
 
 	// Close current context
 	Close()
+
+	// Send a control message.
+	Send(message M) (err error)
 }
