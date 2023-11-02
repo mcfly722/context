@@ -13,7 +13,7 @@ It waits until all child contexts correctly close (parent event loop would be av
 
 ### How to use it:
 
-A full example can be found here: [examples_test.go](https://github.com/mcfly722/goPackages/blob/main/context/examples_test.go)
+A full example can be found here: [examples_test.go](https://github.com/mcfly722/context/blob/main/examples_test.go)
 
 
 #### 1. Add a new context import to your project:
