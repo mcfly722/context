@@ -41,13 +41,14 @@ type Context interface {
 type contextState int
 
 const (
-	working   contextState = 0
-	freezed   contextState = 1
-	disposing contextState = 2
+	notStarted contextState = 0
+	working    contextState = 1
+	freezed    contextState = 2
+	disposing  contextState = 3
 )
 
 type context struct {
-	parent   *context
+	parents  map[*context]*context
 	childs   map[*context]*context
 	instance ContextedInstance
 	state    contextState
@@ -56,19 +57,24 @@ type context struct {
 }
 
 type root struct {
-	ready sync.Mutex
+	ready    sync.Mutex
+	contexts map[ContextedInstance]*context
 }
 
 func newEmptyContext() *context {
 
-	return &context{
-		parent:   &context{},
+	newContext := &context{
+		parents:  map[*context]*context{},
 		childs:   map[*context]*context{},
 		instance: nil,
 		state:    working,
 		isOpened: make(chan struct{}),
-		root:     &root{},
+		root: &root{
+			contexts: make(map[ContextedInstance]*context),
+		},
 	}
+
+	return newContext
 }
 
 // NewContextFor ...
@@ -89,39 +95,52 @@ func (parent *context) NewContextFor(instance ContextedInstance) (ChildContext, 
 
 func newContextFor(parent *context, instance ContextedInstance) (*context, error) {
 
-	newContext := &context{
-		parent:   parent,
-		childs:   map[*context]*context{},
-		instance: instance,
-		state:    working,
-		isOpened: make(chan struct{}),
-		root:     parent.root,
+	newContext := parent.root.contexts[instance]
+
+	// if context not yet added to tree before, create new one
+	if newContext == nil {
+		newContext = &context{
+			parents:  map[*context]*context{},
+			childs:   map[*context]*context{},
+			instance: instance,
+			state:    notStarted,
+			isOpened: make(chan struct{}),
+			root:     parent.root,
+		}
+
 	}
 
+	newContext.parents[parent] = parent
 	parent.childs[newContext] = newContext
+	parent.root.contexts[instance] = newContext
 
-	// Start new Context
-	go func(current *context) {
+	if newContext.state == notStarted {
+		newContext.state = working
+		// Start new Context
+		go func(current *context) {
 
-		// execure user context select {...}
-		current.instance.Go(current)
+			// execure user context select {...}
+			current.instance.Go(current)
 
-		if current.state != disposing {
-			panic(ExitFromContextWithoutClosePanic)
-		}
-
-		// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
-		current.root.ready.Lock()
-		if current.parent != nil {
-			delete(current.parent.childs, current)
-			if current.parent.state == freezed && len(current.parent.childs) == 0 {
-				current.parent.state = disposing
-				close(current.parent.isOpened)
+			if current.state != disposing {
+				panic(ExitFromContextWithoutClosePanic)
 			}
-		}
-		current.root.ready.Unlock()
 
-	}(newContext)
+			// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
+			current.root.ready.Lock()
+			delete(current.root.contexts, instance)
+			if current.parents != nil {
+				for parent := range current.parents {
+					delete(parent.childs, current)
+					if parent.state == freezed && len(parent.childs) == 0 {
+						parent.state = disposing
+						close(parent.isOpened)
+					}
+				}
+			}
+			current.root.ready.Unlock()
+		}(newContext)
+	}
 
 	return newContext, nil
 }

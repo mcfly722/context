@@ -16,7 +16,7 @@ type RootContext interface {
 
 type rootContext struct {
 	instance ContextedInstance
-	context  Context
+	context  *context
 	done     chan struct{}
 }
 
