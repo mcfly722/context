@@ -1,6 +1,6 @@
 # context
-![Version: version](https://img.shields.io/badge/version-v1.0.6-success.svg)
-![Tests: tests](https://img.shields.io/badge/tests-✔6|✘0-success.svg)
+![Version: version](https://img.shields.io/badge/version-v1.1.0-success.svg)
+![Tests: tests](https://img.shields.io/badge/tests-✔5|✘0-success.svg)
 [![License: GPL3.0](https://img.shields.io/badge/License-GPL3.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 <br>
 Unfortunately, the standard golang [context package](https://github.com/golang/go/tree/master/src/context) does not control the closing order of child contexts ([issue #51075](https://github.com/golang/go/issues/51075)).<br>
@@ -94,7 +94,5 @@ It would close all contexts in reverse order: 3->2->1->root.
 <b>It's all sugar.</b><br>
 This timeout or deadlines you can implement in your select loop (see: [<-time.After(...)](https://pkg.go.dev/time#After) or [<-time.Tick(...)](https://pkg.go.dev/time#Tick))<br>
 For values, use the constructor function with parameters.<br>
-
-### By the way
-My goal here is to simplify this not-trivial hierarchical multi-threaded pattern as much as possible without any compromises.<br>
-Its main responsibility is to provide safety-sequenced closing through parent-child hierarchy (graceful shutdown). and nothing more is unnecessary.<br><br>
+ 5. Is it possible to add same instance more than ones to different parents?<br>
+ Yes, this feature is supported. In this case, the new child goroutine would not start a second time, several parents just waited for the same instance to close.
