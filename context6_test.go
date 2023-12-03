@@ -28,28 +28,27 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("%v finished\n", node.name)
-	node.sequenceChecker.Notify(node.sequenceStep)
 
+	node.sequenceChecker.NotifyWithText(node.sequenceStep, "%v finished\n", node.name)
 }
 
-const dynamicPoolSize = 15
-
 func Test_DynamicPool(t *testing.T) {
+	const dynamicPoolSize = 15
+
 	sequenceChecker := newSequenceChecker()
 
 	rootNode := &node6{
 		name:            "root",
 		lifeTimeMS:      1000000,
 		sequenceChecker: sequenceChecker,
-		sequenceStep:    2,
+		sequenceStep:    dynamicPoolSize + 2,
 	}
 
 	inputNode := &node6{
 		name:            "input",
 		lifeTimeMS:      1000000,
 		sequenceChecker: sequenceChecker,
-		sequenceStep:    1,
+		sequenceStep:    dynamicPoolSize + 1,
 	}
 
 	rootContext := context.NewRootContext(rootNode)
@@ -57,9 +56,9 @@ func Test_DynamicPool(t *testing.T) {
 	for i := 0; i < dynamicPoolSize; i++ {
 		workerNode := &node6{
 			name:            fmt.Sprintf("worker[%v]", i),
-			lifeTimeMS:      uint64(100*dynamicPoolSize - 100*i),
+			lifeTimeMS:      uint64(100 * i),
 			sequenceChecker: sequenceChecker,
-			sequenceStep:    -i,
+			sequenceStep:    i,
 		}
 		fmt.Printf("%v configured\n", workerNode.name)
 
