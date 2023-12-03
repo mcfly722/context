@@ -8,8 +8,13 @@ import (
 	context "github.com/mcfly722/context"
 )
 
-type childNode5 struct{}
-type rootNode5 struct{}
+type childNode5 struct {
+	sequenceChecker sequenceChecker
+}
+
+type rootNode5 struct {
+	sequenceChecker sequenceChecker
+}
 
 func (node *childNode5) Go(current context.Context) {
 loop:
@@ -24,9 +29,9 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("go:     childNode disposing for 300ms\n")
+	node.sequenceChecker.NotifyWithText(7, "childNode disposing for 300ms\n")
 	time.Sleep(300 * time.Millisecond)
-	fmt.Printf("go:     childNode finished\n")
+	node.sequenceChecker.NotifyWithText(8, "childNode finished\n")
 }
 
 func (node *rootNode5) Go(current context.Context) {
@@ -42,18 +47,24 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("go:     rootNode finished\n")
+	node.sequenceChecker.NotifyWithText(9, "rootNode finished\n")
 }
 
 func Test_FailCreateContextFromRootNode(t *testing.T) {
+	sequenceChecker := newSequenceChecker()
 
-	rootNode := &rootNode5{}
-	childNode := &childNode5{}
+	rootNode := &rootNode5{
+		sequenceChecker: sequenceChecker,
+	}
 
-	fmt.Printf("1 - creating new root context\n")
+	childNode := &childNode5{
+		sequenceChecker: sequenceChecker,
+	}
+
+	sequenceChecker.NotifyWithText(1, "creating new root context\n")
 	rootContext := context.NewRootContext(rootNode)
 
-	fmt.Printf("2 - creating child context\n")
+	sequenceChecker.NotifyWithText(2, "creating child context\n")
 	_, err := rootContext.NewContextFor(childNode)
 	if err != nil {
 		t.Fatal(err)
@@ -61,27 +72,27 @@ func Test_FailCreateContextFromRootNode(t *testing.T) {
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		fmt.Printf("4 - Closing root context\n")
+		sequenceChecker.NotifyWithText(4, "Closing root context\n")
 		rootContext.Close()
 
-		fmt.Printf("5 - trying to create new context from closed root context...\n")
+		sequenceChecker.NotifyWithText(5, "trying to create new context from closed root context...\n")
 
 		newChildNode := &childNode5{}
 		_, err := rootContext.NewContextFor(newChildNode)
 		if err != nil {
 			_, ok := err.(*context.ClosingIsInProcessForFreezeError)
 			if ok {
-				fmt.Printf("6 - successfully catched error: %v\n", err)
+				fmt.Printf("* - successfully catched error: %v\n", err)
 			} else {
-				panic("6 - uncatched error")
+				panic("uncatched error")
 			}
 		} else {
-			panic("6 - uncatched error")
+			panic("uncatched error")
 		}
 	}()
 
-	fmt.Printf("3 - Wait\n")
+	sequenceChecker.NotifyWithText(3, "Wait\n")
 	rootContext.Wait()
 
-	fmt.Printf("7 - test finished\n")
+	fmt.Printf("test finished with correct sequence = %v\n", sequenceChecker.ToString())
 }
