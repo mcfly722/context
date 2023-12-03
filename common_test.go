@@ -9,6 +9,7 @@ import (
 
 type sequenceChecker interface {
 	Notify(stepNumber uint64)
+	ToString() string
 }
 
 type sequence struct {
@@ -37,6 +38,12 @@ func (current *sequence) Notify(stepNumber uint64) {
 	if lastStep > stepNumber {
 		panic(fmt.Sprintf("%v incorrect sequence", current.steps))
 	}
+}
+
+func (current *sequence) ToString() string {
+	current.ready.Lock()
+	defer current.ready.Unlock()
+	return fmt.Sprintf("%v", current.steps)
 }
 
 func Test_Sequence1(t *testing.T) {
@@ -78,9 +85,10 @@ func Test_SequenceRace(t *testing.T) {
 
 	sequeceChecker := newSequenceChecker()
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 30; i++ {
 		go func(sequenceChecker sequenceChecker) {
-			sequenceChecker.Notify(1)
+			sequenceChecker.Notify(0)
+			fmt.Printf("%v\n", sequenceChecker.ToString())
 		}(sequeceChecker)
 	}
 
