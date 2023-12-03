@@ -12,7 +12,7 @@ type node6 struct {
 	name            string
 	lifeTimeMS      uint64
 	sequenceChecker sequenceChecker
-	sequenceStep    uint64
+	sequenceStep    int
 }
 
 func (node *node6) Go(current context.Context) {
@@ -42,14 +42,14 @@ func Test_DynamicPool(t *testing.T) {
 		name:            "root",
 		lifeTimeMS:      1000000,
 		sequenceChecker: sequenceChecker,
-		sequenceStep:    dynamicPoolSize + 2,
+		sequenceStep:    2,
 	}
 
 	inputNode := &node6{
 		name:            "input",
 		lifeTimeMS:      1000000,
 		sequenceChecker: sequenceChecker,
-		sequenceStep:    dynamicPoolSize + 1,
+		sequenceStep:    1,
 	}
 
 	rootContext := context.NewRootContext(rootNode)
@@ -57,9 +57,9 @@ func Test_DynamicPool(t *testing.T) {
 	for i := 0; i < dynamicPoolSize; i++ {
 		workerNode := &node6{
 			name:            fmt.Sprintf("worker[%v]", i),
-			lifeTimeMS:      100*dynamicPoolSize - 100*uint64(i),
+			lifeTimeMS:      uint64(100*dynamicPoolSize - 100*i),
 			sequenceChecker: sequenceChecker,
-			sequenceStep:    uint64(dynamicPoolSize - i),
+			sequenceStep:    -i,
 		}
 		fmt.Printf("%v configured\n", workerNode.name)
 
