@@ -8,25 +8,23 @@ import (
 )
 
 type sequenceChecker interface {
-	Notify(stepNumber uint64)
+	Notify(stepNumber int)
+	NotifyWithText(stepNumber int, msg string, a ...interface{})
 	ToString() string
 }
 
 type sequence struct {
-	steps []uint64
+	steps []int
 	ready sync.Mutex
 }
 
 func newSequenceChecker() sequenceChecker {
 	return &sequence{
-		steps: []uint64{},
+		steps: []int{},
 	}
 }
 
-func (current *sequence) Notify(stepNumber uint64) {
-	current.ready.Lock()
-	defer current.ready.Unlock()
-
+func (current *sequence) notify(stepNumber int) {
 	if len(current.steps) == 0 {
 		current.steps = append(current.steps, stepNumber)
 		return
@@ -38,6 +36,21 @@ func (current *sequence) Notify(stepNumber uint64) {
 	if lastStep > stepNumber {
 		panic(fmt.Sprintf("%v incorrect sequence", current.steps))
 	}
+
+}
+
+func (current *sequence) Notify(stepNumber int) {
+	current.ready.Lock()
+	defer current.ready.Unlock()
+	current.notify(stepNumber)
+}
+
+func (current *sequence) NotifyWithText(stepNumber int, msg string, a ...interface{}) {
+	current.ready.Lock()
+	defer current.ready.Unlock()
+	current.notify(stepNumber)
+	fmt.Printf("%v - ", stepNumber)
+	fmt.Printf(msg, a...)
 }
 
 func (current *sequence) ToString() string {

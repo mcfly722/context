@@ -12,7 +12,7 @@ type node6 struct {
 	name            string
 	lifeTimeMS      uint64
 	sequenceChecker sequenceChecker
-	sequenceStep    uint64
+	sequenceStep    int
 }
 
 func (node *node6) Go(current context.Context) {
@@ -28,14 +28,13 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("%v finished\n", node.name)
-	node.sequenceChecker.Notify(node.sequenceStep)
 
+	node.sequenceChecker.NotifyWithText(node.sequenceStep, "%v finished\n", node.name)
 }
 
-const dynamicPoolSize = 15
-
 func Test_DynamicPool(t *testing.T) {
+	const dynamicPoolSize = 15
+
 	sequenceChecker := newSequenceChecker()
 
 	rootNode := &node6{
@@ -57,9 +56,9 @@ func Test_DynamicPool(t *testing.T) {
 	for i := 0; i < dynamicPoolSize; i++ {
 		workerNode := &node6{
 			name:            fmt.Sprintf("worker[%v]", i),
-			lifeTimeMS:      100*dynamicPoolSize - 100*uint64(i),
+			lifeTimeMS:      uint64(100 * i),
 			sequenceChecker: sequenceChecker,
-			sequenceStep:    uint64(dynamicPoolSize - i),
+			sequenceStep:    i,
 		}
 		fmt.Printf("%v configured\n", workerNode.name)
 
