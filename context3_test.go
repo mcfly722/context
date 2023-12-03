@@ -1,6 +1,7 @@
 package context_test
 
 import (
+	"fmt"
 	"testing"
 
 	context "github.com/mcfly722/context"
@@ -52,5 +53,5 @@ func Test_NewInstanceDuringClosing(t *testing.T) {
 
 	rootContext.Wait()
 
-	sequenceChecker.NotifyWithText(8, "test finished with correct sequence = %v\n", sequenceChecker.ToString())
+	fmt.Printf("test finished with correct sequence = %v\n", sequenceChecker.ToString())
 }
