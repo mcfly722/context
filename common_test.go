@@ -24,10 +24,7 @@ func newSequenceChecker() sequenceChecker {
 	}
 }
 
-func (current *sequence) Notify(stepNumber int) {
-	current.ready.Lock()
-	defer current.ready.Unlock()
-
+func (current *sequence) notify(stepNumber int) {
 	if len(current.steps) == 0 {
 		current.steps = append(current.steps, stepNumber)
 		return
@@ -39,10 +36,19 @@ func (current *sequence) Notify(stepNumber int) {
 	if lastStep > stepNumber {
 		panic(fmt.Sprintf("%v incorrect sequence", current.steps))
 	}
+
+}
+
+func (current *sequence) Notify(stepNumber int) {
+	current.ready.Lock()
+	defer current.ready.Unlock()
+	current.notify(stepNumber)
 }
 
 func (current *sequence) NotifyWithText(stepNumber int, msg string, a ...interface{}) {
-	current.Notify(stepNumber)
+	current.ready.Lock()
+	defer current.ready.Unlock()
+	current.notify(stepNumber)
 	fmt.Printf("%v - ", stepNumber)
 	fmt.Printf(msg, a...)
 }
