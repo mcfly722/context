@@ -10,20 +10,16 @@ import (
 )
 
 type node5 struct {
-	name  string
-	ready sync.Mutex
+	name            string
+	sequenceChecker sequenceChecker
+	sequenceStep    int
+	ready           sync.Mutex
 }
 
 func (node *node5) getName() string {
 	node.ready.Lock()
 	defer node.ready.Unlock()
 	return node.name
-}
-
-func newNode5(name string) *node5 {
-	return &node5{
-		name: name,
-	}
 }
 
 func (node *node5) Go(current context.Context) {
@@ -40,16 +36,20 @@ loop:
 			}
 		}
 	}
-	fmt.Printf("%v finished\n", node.getName())
+	node.sequenceChecker.NotifyWithText(node.sequenceStep, "%v finished\n", node.getName())
 }
 
-func mixedLadder(path string, parents map[context.ChildContext]struct{}, width int, height int) {
+func mixedLadder(sequenceChecker sequenceChecker, path string, parents map[context.ChildContext]struct{}, width int, height int) {
 	if height > 0 {
 		newPath := fmt.Sprintf("%v->%v", path, height)
 		newContexts := make(map[context.ChildContext]struct{})
 
 		for i := 0; i < width; i++ {
-			newInstance := newNode5(fmt.Sprintf("%v", newPath))
+			newInstance := &node5{
+				name:            fmt.Sprintf("%v", newPath),
+				sequenceChecker: sequenceChecker,
+				sequenceStep:    height,
+			}
 			fmt.Printf("%v configured\n", newInstance.getName())
 
 			for parent := range parents {
@@ -58,27 +58,34 @@ func mixedLadder(path string, parents map[context.ChildContext]struct{}, width i
 			}
 		}
 
-		mixedLadder(newPath, newContexts, width, height-1)
+		mixedLadder(sequenceChecker, newPath, newContexts, width, height-1)
 	}
 }
 
 func Test_MixedLadder(t *testing.T) {
+	const ladderHight = 10
+	sequenceChecker := newSequenceChecker()
 
-	rootNode := newNode5("root")
+	rootNode := &node5{
+		name:            "root",
+		sequenceChecker: sequenceChecker,
+		sequenceStep:    ladderHight + 1,
+	}
 
 	rootContext := context.NewRootContext(rootNode)
 
 	rootContextMap := make(map[context.ChildContext]struct{})
 	rootContextMap[rootContext] = struct{}{}
 
-	mixedLadder("root", rootContextMap, 3, 10)
+	mixedLadder(sequenceChecker, "root", rootContextMap, 3, ladderHight)
 
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		fmt.Println("Close")
+		sequenceChecker.NotifyWithText(0, "Close\n")
 		rootContext.Close()
 	}()
 
 	rootContext.Wait()
-	fmt.Println("test done")
+
+	fmt.Printf("finished with correct sequence = %v\n", sequenceChecker.ToString())
 }
