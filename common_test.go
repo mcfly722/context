@@ -43,6 +43,7 @@ func (current *sequence) Notify(stepNumber int) {
 
 func (current *sequence) NotifyWithText(stepNumber int, msg string, a ...interface{}) {
 	current.Notify(stepNumber)
+	fmt.Printf("%v - ", stepNumber)
 	fmt.Printf(msg, a...)
 }
 
