@@ -8,22 +8,22 @@ import (
 )
 
 type sequenceChecker interface {
-	Notify(stepNumber uint64)
+	Notify(stepNumber int)
 	ToString() string
 }
 
 type sequence struct {
-	steps []uint64
+	steps []int
 	ready sync.Mutex
 }
 
 func newSequenceChecker() sequenceChecker {
 	return &sequence{
-		steps: []uint64{},
+		steps: []int{},
 	}
 }
 
-func (current *sequence) Notify(stepNumber uint64) {
+func (current *sequence) Notify(stepNumber int) {
 	current.ready.Lock()
 	defer current.ready.Unlock()
 
