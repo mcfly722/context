@@ -28,6 +28,8 @@ loop:
 		select {
 		case <-time.After(time.Duration(rand.Intn(100)) * time.Microsecond):
 			current.Close()
+		case <-time.After(time.Duration(rand.Intn(100)) * time.Microsecond):
+			break loop
 		case _, isOpened := <-current.Context():
 			if !isOpened {
 				break loop
@@ -47,7 +49,6 @@ func (parent *node2) simpleTree2(context context.ChildContext, width int, height
 			newNode := newNode2(fmt.Sprintf("%v->%v", parent.path, i), i)
 			newContext, err := context.NewContextFor(newNode)
 			if err == nil {
-				//fmt.Printf("%v started\n", newNode.name())
 				newNode.simpleTree2(newContext, width, height-1)
 			}
 
