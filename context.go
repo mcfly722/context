@@ -122,23 +122,35 @@ func newContextFor(parent *context, instance ContextedInstance) (*context, error
 			// execure user context select {...}
 			current.instance.Go(current)
 
-			if current.state != disposing {
-				panic(ExitFromContextWithoutClosePanic)
-			}
+			{
+				current.root.ready.Lock()
 
-			// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
-			current.root.ready.Lock()
-			delete(current.root.contexts, instance)
-			if current.parents != nil {
-				for parent := range current.parents {
-					delete(parent.childs, current)
-					if parent.state == freezed && len(parent.childs) == 0 {
-						parent.state = disposing
-						close(parent.isOpened)
+				if current.state != disposing {
+					// Goroutine exits without a Cancel() call, just clean it from all children. If a child has no other parents (closing last parent), initiate child closing.
+					for child := range current.childs {
+						delete(child.parents, current)
+						//fmt.Printf("[%v]\n", len(child.parents))
+						if len(child.parents) == 0 {
+							child.freezeAllChildsAndSubchilds()
+						}
 					}
 				}
+
+				// Remove node from parent childs and if parent is freezed and empty, initiate it disposing
+				delete(current.root.contexts, instance)
+				if current.parents != nil {
+					for parent := range current.parents {
+						delete(parent.childs, current)
+						if parent.state == freezed && len(parent.childs) == 0 {
+							parent.state = disposing
+							close(parent.isOpened)
+						}
+					}
+				}
+
+				current.root.ready.Unlock()
 			}
-			current.root.ready.Unlock()
+
 		}(newContext)
 	}
 
