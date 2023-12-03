@@ -9,6 +9,7 @@ import (
 
 type sequenceChecker interface {
 	Notify(stepNumber int)
+	NotifyWithText(stepNumber int, msg string, a ...interface{})
 	ToString() string
 }
 
@@ -38,6 +39,11 @@ func (current *sequence) Notify(stepNumber int) {
 	if lastStep > stepNumber {
 		panic(fmt.Sprintf("%v incorrect sequence", current.steps))
 	}
+}
+
+func (current *sequence) NotifyWithText(stepNumber int, msg string, a ...interface{}) {
+	current.Notify(stepNumber)
+	fmt.Printf(msg, a...)
 }
 
 func (current *sequence) ToString() string {
